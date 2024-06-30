@@ -1,0 +1,57 @@
+﻿@RenderInternals()
+
+@code {
+    [Parameter]
+    public RuntimeCustomBackground runtimeCustomBackground { get; set; }
+
+    [Parameter]
+    public Action saveAction { get; set; }
+
+    public RenderFragment RenderInternals()
+    {
+        if (runtimeCustomBackground == null)
+        {
+            return @<div></div>;
+        }
+        else
+        {
+            return @RenderInternals2();
+        }
+
+    }
+
+
+
+    private RenderFragment RenderInternals2()
+    {
+        //Console.WriteLine(runtimeCustomPanel.PanelType);
+        switch (runtimeCustomBackground.BackgroundType)
+        {
+            case "System":
+                var guid = Guid.NewGuid().ToString();
+                return @<div>@(new MarkupString(runtimeCustomBackground.BackgroundContent))</div>;
+            case "Embedded":
+                return@<iframe sandbox="allow-storage-access-by-user-activation allow-presentation allow-pointer-lock allow-modals allow-scripts allow-forms" class="h-full w-full" src="@runtimeCustomBackground.BackgroundContent"></iframe>;
+            case "Image":
+                return @<img src="@runtimeCustomBackground.BackgroundContent" class="pointer-events-none h-full w-full object-cover" />;
+            case "Video":
+                return@<div class="h-full w-full">
+
+        <video style="
+            object-fit: cover;
+" id="backgroundvideo" class="pointer-events-none h-full w-full"><source src="@runtimeCustomBackground.BackgroundContent" type="video/mp4" /></video>
+        <script>
+            var video = document.getElementById('backgroundvideo')
+            video.muted = true;
+            video.loop = true;
+            video.play();
+            console.log(video)
+        </script>
+                </div>;
+            case "Audio":
+                return @<audio autoplay loop class="h-full w-full"><source src="@runtimeCustomBackground.BackgroundContent" type="audio/mpeg" /></audio>;
+            default:
+                return @<div>Unknown</div>;
+        }
+    }
+}

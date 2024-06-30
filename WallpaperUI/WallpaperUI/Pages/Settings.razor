@@ -1,0 +1,495 @@
+﻿@inject IJSRuntime JS
+@inject IHttpClientFactory hcf
+@inject IDialogService DialogService
+<div style="
+    padding: 16px;
+    height: 100%;
+" class="flex flex-row">
+    <FluentNavMenu Width="250">
+        <FluentNavLink Icon="@(new Icons.Regular.Size24.PuzzlePiece())" @onclick="@(() => {
+            screen = "addons";
+        })">Addons</FluentNavLink>
+        <FluentNavLink Icon="@(new Icons.Regular.Size24.Window())" @onclick="@(() => {
+            screen = "panels";
+        })">Panels</FluentNavLink>
+        <FluentNavLink Icon="@(new Icons.Regular.Size24.Wallpaper())" @onclick="@(() => {
+            screen = "backgrounds";
+        })">Backgrounds</FluentNavLink>
+        <FluentNavLink Icon="@(new Icons.Regular.Size24.Settings())" @onclick="@(() => {
+            screen = "preferences";
+        })">Preferences</FluentNavLink>
+    </FluentNavMenu>
+
+    <div style="width: 24px;"></div>
+    <div class="h-full w-full" style="
+        padding: 16px;
+        border-radius: 12px;
+        background-color: rgba(0,0,0,0.15);
+        overflow: overlay;
+    ">
+        @if (screen == "addons")
+        {
+            <div style="
+                font-size: 26px;
+                font-weight: 600;
+                            ">
+                Addons
+            </div>
+            <div class="h-8"></div>
+            <div class="card flex flex-row items-center justify-center p-4">
+                <FluentButton @onclick="@(async () => {
+                    var req = await JS.InvokeAsync<int>("getcontrolport");
+                    var res = new UriBuilder(
+                        new Uri("http://localhost:" + req + "/installaddon")
+                    );
+                    res.Query = "?installmode=zip";
+                    var result = await client.GetAsync(res.Uri);
+                    if (result.IsSuccessStatusCode)
+                    {
+                        await OpenDialogAsync("Installation successful, application will now restart. ");
+                        await JS.InvokeVoidAsync("remoterestart");
+                    }
+                    else
+                    {
+                        await OpenDialogAsync("Installation failed");
+                    }
+                    await JS.InvokeVoidAsync("refreshaddons");
+                })">
+                    <FluentIcon Value="@(new Icons.Regular.Size20.ArrowDownload())" Slot="start" Color="Color.Neutral"></FluentIcon>
+                    Install addon (.zip)
+                </FluentButton>
+                <div class="w-4"></div>
+                <FluentButton @onclick="@(async() => {
+                    var req = await JS.InvokeAsync<string>("getcontrolport");
+
+                    var res = new UriBuilder(
+                        new Uri("http://localhost:" + req + "/installaddon")
+                    );
+                    res.Query = "?installmode=folder";
+                    var result = await client.GetAsync(res.Uri);
+                    if (result.IsSuccessStatusCode)
+                    {
+                        await OpenDialogAsync("Installation successful, application will now restart. ");
+                        await JS.InvokeVoidAsync("remoterestart");
+                    }
+                    else
+                    {
+                        await OpenDialogAsync("Installation failed, " + await result.Content.ReadAsStringAsync());
+                    }
+                    await JS.InvokeVoidAsync("refreshaddons");
+                })">
+                    <FluentIcon Value="@(new Icons.Regular.Size20.ArrowDownload())" Slot="start" Color="Color.Neutral"></FluentIcon>
+                    Install addon (folder)
+                </FluentButton>
+            </div>
+            <div class="h-8"></div>
+
+            <div style="
+                font-size: 20px;
+                font-weight: 500;
+                                ">
+                Running Addons
+            </div>
+            <div class="h-4"></div>
+            <FluentAccordion>
+
+                @foreach (var item in Home.addonManifests)
+                {
+                    <FluentAccordionItem Heading="@(item.Name + " (" + item.ClientID + ")")" Style="
+                        padding: 10px;
+                                            ">
+                        <FluentIcon Value="@(new Icons.Regular.Size24.PuzzlePiece())" Color="@Color.Neutral" Slot="start" />
+
+                        <div>Author: @item.Author</div>
+                        <div>Version: @item.Version</div>
+                        <div>Client ID: @item.ClientID</div>
+                        <div>Description: @item.Description</div>
+                        <div>Bootstrap executable: @item.BootstrapExecutable</div>
+
+                        <div>Auto restart enabled: @item.EnableRestart</div>
+
+                    </FluentAccordionItem>
+                }
+
+            </FluentAccordion>
+        }
+        @if (screen == "panels")
+        {
+
+            <div style="
+                font-size: 26px;
+                font-weight: 600;
+                        ">
+                Panels
+            </div>
+            <div class="h-8"></div>
+            <div style="
+                font-size: 20px;
+                font-weight: 500;
+                            ">
+                Available Panels
+            </div>
+            <div class="h-4"></div>
+            <FluentAccordion>
+
+                @foreach (var item in Home.availablePanels)
+                {
+                    <FluentAccordionItem Heading="@(item.PanelTitle + " (" + item.LoaderPanelID + ")")" Style="
+                        padding: 10px;
+                                    ">
+                        <FluentIcon Value="@(new Icons.Regular.Size24.Window())" Color="@Color.Neutral" Slot="start" />
+
+                        <div>Panel Type: @item.PanelType</div>
+                        <div>Panel ID: @item.LoaderPanelID</div>
+
+                        <div>Panel Control Port (websocket): @item.ControlPort</div>
+
+                        <div class="h-7"></div>
+
+                        <div>Added by: @item.ClientID</div>
+                        <div class="h-4"></div>
+                        <div class="card flex flex-row items-center" style="padding-left: 16px; overflow: overlay;">
+                            <FluentButton Appearance="Appearance.Neutral" @onclick="() => {
+                                Home.Instance.AddPanel(item.LoaderPanelID);
+
+                            }">
+                                <FluentIcon Value="@(new Icons.Regular.Size16.AddCircle())" Slot="start" Color="Color.Success"></FluentIcon>
+                                Add Panel
+                            </FluentButton>
+
+                        </div>
+                    </FluentAccordionItem>
+                }
+
+            </FluentAccordion>
+            <div class="h-8"></div>
+            <div style="
+                font-size: 20px;
+                font-weight: 500;
+                                ">
+                Active Panels
+            </div>
+            <div class="h-4"></div>
+            <FluentAccordion>
+
+                @foreach (var item in Home.panels)
+                {
+                    bool openthreedots = false;
+                    string itemid = item.PersistentPanelID;
+
+                    <FluentAccordionItem Heading="@(item.PanelTitle + " (" + item.LoaderPanelID + ")")" Style="
+                        padding: 10px;
+                                            ">
+                        <FluentIcon Value="@(new Icons.Regular.Size24.Window())" Color="@Color.Neutral" Slot="start" />
+                        <div slot="end">
+                            <FluentButton IconEnd="@(new Icons.Regular.Size16.MoreHorizontal())" Id="@itemid"
+                                          Title="Other settings"
+                                          OnClick="@(() => {
+                                                menuOpen[itemid] = true;
+                                          })" />
+                        </div>
+                        <div>Panel Title: @openthreedots</div>
+                        <div>Panel Type: @item.PanelType</div>
+                        <div>Panel ID: @item.LoaderPanelID</div>
+                        <div>Persistent Panel ID: @item.PersistentPanelID</div>
+
+                        <div>Panel Control Port (websocket): @item.ControlPort</div>
+
+                        <div class="h-7"></div>
+
+                        <div>Added by: @item.ClientID</div>
+
+                        <div class="h-7"></div>
+
+                        <div>Panel Position: @item.PersistentPanelX, @item.PersistentPanelY</div>
+                        <div>Panel Size: @item.PersistentPanelWidth, @item.PersistentPanelHeight</div>
+
+                        <div class="h-7"></div>
+                        <div class="flex flex-row" style="overflow: overlay">
+                            <div style="width: max-content">Panel Persistent Data: @item.PersistentPanelData</div>
+                        </div>
+                        <div class="h-4"></div>
+                        <div class="card flex flex-row items-center" style="padding-left: 16px; overflow: overlay;">
+                            <div style="min-width: max-content" class="flex flex-row">
+                                <FluentButton Appearance="Appearance.Stealth" @onclick="() => {
+                                item.PersistentPanelData = Home.availableTemplatePanels.FirstOrDefault(x => x.LoaderPanelID == item.LoaderPanelID)!.PanelDefaultData;
+                                Home.Instance.UpdatePanelData();
+                                App.SavePanelData(Home.panels);
+                            }">
+                                    <FluentIcon Value="@(new Icons.Regular.Size20.ArrowReset())" Slot="start" Color="Color.Neutral"></FluentIcon>
+                                    Reset Panel Data
+                                </FluentButton>
+                                <div class="w-4"></div>
+                                <FluentButton Appearance="Appearance.Neutral" @onclick="() => {
+                                item.PersistentPanelX = item.PanelRecommendedX;
+                                item.PersistentPanelY = item.PanelRecommendedY;
+                                item.PersistentPanelWidth = item.PanelRecommendedWidth;
+                                item.PersistentPanelHeight = item.PanelRecommendedHeight;
+                                Home.Instance.UpdatePanelData();
+                                App.SavePanelData(Home.panels);
+                            }">
+                                    <FluentIcon Value="@(new Icons.Regular.Size20.ArrowReset())" Slot="start" Color="Color.Neutral"></FluentIcon>
+                                    Reset Panel Position
+                                </FluentButton>
+                                <div class="w-4"></div>
+                            <FluentButton BackgroundColor="rgb(200,50,50)" @onclick="() => {
+                                Home.panels.Remove(item);
+                                Home.Instance.UpdatePanelData();
+                                App.SavePanelData(Home.panels);
+                            }">
+                                    <FluentIcon Value="@(new Icons.Regular.Size16.Dismiss())" Slot="start" Color="Color.Neutral"></FluentIcon>
+                                    Remove Panel
+                                </FluentButton>
+                            </div>
+
+                        </div>
+                        <FluentMenu Anchor="@itemid" Open="@(menuOpen.ContainsKey(itemid) ? menuOpen[itemid] : false)" @onmenuchange="@((MenuChangeEventArgs e) => {
+                           menuOpen[itemid] = false;
+                           Console.WriteLine("Menu closed");
+                           switch (e.Value) {
+                               case "Bring to Front":
+                                      Home.panels.Remove(item);
+                                      Home.panels.Add(item);
+                                      Home.Instance.UpdatePanelData();
+                                      App.SavePanelData(Home.panels);
+                                      break;
+                                case "Send to Back":
+                                    Home.panels.Remove(item);
+                                    Home.panels.Insert(0, item);
+                                    Home.Instance.UpdatePanelData();
+                                    App.SavePanelData(Home.panels);
+                                     StateHasChanged();
+                                    menuOpen[itemid] = false;
+                                    break;
+                                case "Move Forward one":
+
+                                    {
+                                        // Move forward one by moving item to index + 1
+                                    int index = Home.panels.IndexOf(item);
+                                    if (index < Home.panels.Count - 1)
+                                    {
+                                        Home.panels.Remove(item);
+                                        Home.panels.Insert(index + 1, item);
+                                    }
+                                    Home.Instance.UpdatePanelData();
+                                    App.SavePanelData(Home.panels);
+                                     StateHasChanged();
+                                    }
+                                    break;
+                                case "Move Backward one":
+                                    {
+
+                                        // Move backward one by moving item to index - 1
+                                        int index = Home.panels.IndexOf(item);
+                                        if (index > 0)
+                                        {
+                                            Home.panels.Remove(item);
+                                            Home.panels.Insert(index - 1, item);
+                                        }
+                                        Home.Instance.UpdatePanelData();
+                                        App.SavePanelData(Home.panels);
+                                        StateHasChanged();
+                                    }
+                                    break;
+                               
+                           }
+                        })" VerticalThreshold="170">
+                            <FluentMenuItem>
+                                <span slot="start"><FluentIcon Value="@(new Icons.Regular.Size20.PositionToFront())" Color="Color.Neutral" Slot="start" /></span>
+                                Bring to Front
+                            </FluentMenuItem>
+                            <FluentMenuItem>
+                                <span slot="start"><FluentIcon Value="@(new Icons.Regular.Size20.PositionToBack())" Color="Color.Neutral" Slot="start" /></span>
+                                Send to Back
+                            </FluentMenuItem>
+                            <FluentMenuItem>
+                                <span slot="start"><FluentIcon Value="@(new Icons.Regular.Size20.PositionForward())" Color="Color.Neutral" Slot="start" /></span>
+                                Move Forward one
+                            </FluentMenuItem>
+                            <FluentMenuItem>
+                                <span slot="start"><FluentIcon Value="@(new Icons.Regular.Size20.PositionBackward())" Color="Color.Neutral" Slot="start" /></span>
+                                Move Backward one
+                            </FluentMenuItem>
+                        </FluentMenu>
+                    </FluentAccordionItem>
+
+                }
+
+            </FluentAccordion>
+        }
+        @if (screen == "backgrounds")
+        {
+            <div style="
+                font-size: 26px;
+                font-weight: 600;
+                        ">
+                Backgrounds
+            </div>
+            <div class="h-8"></div>
+            <div style="
+                font-size: 20px;
+                font-weight: 500;
+                                ">
+                Active Background
+            </div>
+            <div class="h-4"></div>
+            <div>Persistent ID: @Home.currentBackground</div>
+            <div class="h-8"></div>
+            <div style="
+                font-size: 20px;
+                font-weight: 500;
+                            ">
+                Available Backgrounds
+            </div>
+            <div class="h-4"></div>
+            <FluentAccordion>
+
+                @foreach (var item in Home.availableBackgrounds)
+                {
+                    <FluentAccordionItem Heading="@item.LoaderBackgroundID" Style="
+                        padding: 10px;
+                                    ">
+                        <FluentIcon Value="@(new Icons.Regular.Size24.Wallpaper())" Color="@Color.Neutral" Slot="start" />
+
+                        <div>Background ID: @item.LoaderBackgroundID</div>
+                        <div>Background Type: @item.BackgroundType</div>
+
+                        <div>Background Control Port (websocket): @item.ControlPort</div>
+                        <div class="h-4"></div>
+                        <div class="card flex flex-row items-center" style="padding-left: 16px; overflow: overlay;">
+                            <div style="min-width: max-content" class="flex flex-row">
+                                <FluentButton Appearance="Appearance.Neutral" @onclick="() => {
+                                    Home.Instance.SetBackground(item.LoaderBackgroundID);
+                            }">
+                                    <FluentIcon Value="@(new Icons.Regular.Size20.Checkmark())" Slot="start" Color="Color.Neutral"></FluentIcon>
+                                    Set as Background
+                                </FluentButton>
+                            </div>
+                        </div>
+
+
+                    </FluentAccordionItem>
+                }
+            </FluentAccordion>
+            <div class="h-8"></div>
+            <div style="
+                font-size: 20px;
+                font-weight: 500;
+                                ">
+                Last active Backgrounds
+            </div>
+            <div class="h-4"></div>
+            <FluentAccordion>
+
+                @foreach (var item in Home.backgrounds)
+                {
+                    <FluentAccordionItem Heading="@item.LoaderBackgroundID" Style="
+                        padding: 10px;
+                                            ">
+                        <FluentIcon Value="@(new Icons.Regular.Size24.Wallpaper())" Color="@Color.Neutral" Slot="start" />
+
+                        <div>Background ID: @item.LoaderBackgroundID</div>
+                        <div>Background Type: @item.BackgroundType</div>
+                        <div>Persistent Background ID: @item.PersistentBackgroundID</div>
+
+                        <div>Added by: @item.ClientID</div>
+
+                        <div>Background Control Port (websocket): @item.ControlPort</div>
+                        <div class="h-4"></div>
+                        <div class="card flex flex-row items-center" style="padding-left: 16px; overflow: overlay;">
+                            <div style="min-width: max-content" class="flex flex-row">
+                                <FluentButton Appearance="Appearance.Neutral" @onclick="() => {
+                                    Home.Instance.SetBackground(item.LoaderBackgroundID);
+                            }">
+                                    <FluentIcon Value="@(new Icons.Regular.Size20.Checkmark())" Slot="start" Color="Color.Neutral"></FluentIcon>
+                                    Set as Background
+                                </FluentButton>
+                            </div>
+                        </div>
+
+
+                    </FluentAccordionItem>
+                }
+            </FluentAccordion>
+
+        }
+        @if (screen == "preferences")
+        {
+            <div style="
+                font-size: 26px;
+                font-weight: 600;
+                        ">
+                Settings
+            </div>
+            <div class="h-8"></div>
+            <div style="
+                font-size: 20px;
+                font-weight: 500;
+                            ">
+                General
+            </div>
+            <div class="h-4"></div>
+            <div class="card flex flex-row items-center" style="padding-left: 16px; overflow: overlay;">
+                <FluentButton Appearance="Appearance.Neutral" @onclick="@(() => {
+                    JS.InvokeVoidAsync("remoterestart");
+                    
+                })">
+                    <FluentIcon Value="@(new Icons.Regular.Size20.ArrowCounterclockwise())" Slot="start" Color="Color.Neutral"></FluentIcon>
+                    Restart Application
+                </FluentButton>
+                <div class="w-4"></div>
+                <FluentButton Appearance="Appearance.Neutral" @onclick="() => {
+                    App.Instance.preferencesManager.Clear();
+                }">
+                    <FluentIcon Value="@(new Icons.Regular.Size20.ArrowReset())" Slot="start" Color="Color.Neutral"></FluentIcon>
+                    Reset Settings
+                </FluentButton>
+            </div>
+        }
+
+
+    </div>
+
+</div>
+
+@code {
+    [Parameter]
+    public Home home { get; set; }
+
+    public string screen = "addons";
+
+    string activeId = "accordion-1";
+
+    FluentAccordionItem? changed;
+
+    private HttpClient client = null;
+
+    private Dictionary<string, Boolean> menuOpen = new Dictionary<string, Boolean>();
+
+    protected override void OnInitialized()
+    {
+        client = hcf.CreateClient();
+    }
+
+    private void HandleOnAccordionItemChange(FluentAccordionItem item)
+    {
+        changed = item;
+    }
+
+    private async Task OpenDialogAsync(string status)
+    {
+        DialogParameters parameters = new()
+            {
+                Title = $"Installation finished",
+                PrimaryAction = "OK",
+                PrimaryActionEnabled = true,
+                SecondaryActionEnabled = false,
+                
+                Width = "500px",
+                PreventScroll = true
+            };
+        var result = await DialogService.ShowDialogAsync<Dialog>(status,parameters);
+        await result.Result;
+        
+    }
+}

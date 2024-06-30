@@ -1,0 +1,83 @@
+﻿
+<Card captionBar="@captionBar" stateChanged="(data) => {
+    runtimeCustomPanel.PersistentPanelX = data.X;
+    runtimeCustomPanel.PersistentPanelY = data.Y;
+    runtimeCustomPanel.PersistentPanelWidth = data.Width;
+    runtimeCustomPanel.PersistentPanelHeight = data.Height;
+    saveAction();
+
+}" 
+    MinHeight="@runtimeCustomPanel.PanelMinHeight"
+    MaxHeight="@runtimeCustomPanel.PanelMaxHeight"
+  
+   MinWidth="@runtimeCustomPanel.PanelMinWidth"
+   MaxWidth="@runtimeCustomPanel.PanelMaxWidth"
+      Width="@runtimeCustomPanel.PersistentPanelWidth"
+      Height="@runtimeCustomPanel.PersistentPanelHeight"
+      X="@runtimeCustomPanel.PersistentPanelX"
+   Y="@runtimeCustomPanel.PersistentPanelY"
+   panelHeader="@panelHeader"
+   IsDraggable="@(panelHeader != null ? panelHeader.enabledrag : true)"
+>
+    @RenderInternals()
+</Card>
+@code {
+    [Parameter]
+    public RuntimeCustomPanel runtimeCustomPanel { get; set; }
+
+    public PanelHeader panelHeader => Home.panelHeaders.FirstOrDefault(x => x.persistentpanelid == runtimeCustomPanel.PersistentPanelID);
+
+    [Parameter]
+    public Action saveAction { get; set; }
+
+    [Parameter]
+    public Action closeAction { get; set; }
+
+    public void OnClose()
+    {
+        closeAction();
+    }
+
+    RenderFragment captionBar => @<div>
+        <FluentButton IconEnd="@(new Icons.Regular.Size16.Dismiss())" @onclick="OnClose"
+                      Title="Close panel" style=@(panelHeader != null ? (panelHeader.enableclose ? "" : "display: none;") : "") />
+
+    </div>
+    ;
+
+    public RenderFragment RenderInternals()
+    {
+        if (runtimeCustomPanel == null)
+        {
+            return @<div>Panel is null</div>;
+        }
+        else
+        {
+            return @RenderInternals2();
+        }
+
+    }
+
+   
+
+    private RenderFragment RenderInternals2()
+    {
+        //Console.WriteLine(runtimeCustomPanel.PanelType);
+        switch (runtimeCustomPanel.PanelType)
+        {
+            case "System":
+                var guid = Guid.NewGuid().ToString();
+                return @<div>@(new MarkupString(runtimeCustomPanel.PanelContent))</div>;
+            case "Embedded":
+                return@<iframe sandbox="allow-storage-access-by-user-activation allow-presentation allow-pointer-lock allow-modals allow-scripts allow-forms" class="h-full w-full" src="@runtimeCustomPanel.PanelContent"></iframe>;
+                case "Image":
+                return @<img src="@runtimeCustomPanel.PanelContent" class="h-full w-full" />;
+                case "Video":
+                return @<video autoplay loop class="h-full w-full"><source src="@runtimeCustomPanel.PanelContent" type="video/mp4" /></video>;
+                case "Audio":
+                return @<audio autoplay loop class="h-full w-full"><source src="@runtimeCustomPanel.PanelContent" type="audio/mpeg" /></audio>;
+            default:
+                return @<div>Unknown</div>;
+        }
+    }
+}

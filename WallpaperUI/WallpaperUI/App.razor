@@ -1,0 +1,293 @@
+﻿<FluentDialogProvider />
+<FluentDesignTheme Mode="DesignThemeModes.System" CustomColor="#ff0000" OfficeColor="OfficeColor.OneNote" />
+<Router AppAssembly="@typeof(App).Assembly">
+    <Found Context="routeData">
+        <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
+    </Found>
+    <NotFound>
+        <PageTitle>Not found</PageTitle>
+        <LayoutView Layout="@typeof(MainLayout)">
+            <p role="alert">Sorry, there's nothing at this address.</p>
+        </LayoutView>
+    </NotFound>
+</Router>
+@if (!enableSelection)
+{
+    <style>
+        * {
+            user-select: none;
+        }
+    </style>
+}
+@using System.Text.Json;
+@using System.Dynamic;
+@using WallpaperUI.Pages;
+@inject IJSRuntime JS
+@code {
+    public static App Instance = null;
+    public bool enableSelection = true;
+    public PreferencesManager preferencesManager = new PreferencesManager();
+    private IJSObjectReference panelSystem;
+    private IJSObjectReference backgroundSystem;
+    private IJSObjectReference preferencesSystem;
+    private IJSObjectReference restartSystem;
+    protected override async Task OnInitializedAsync()
+    {
+        Instance = this;
+        preferencesManager.AddChangeHandler((x) =>
+        {
+            SavePreferences(preferencesManager);
+            return x;
+        });
+    }
+
+    private static Dictionary<string, MouseHandler> mouseHandlers = new Dictionary<string, MouseHandler>();
+
+    private static Dictionary<string, MouseUpHandler> mouseUpHandlers = new Dictionary<string, MouseUpHandler>();
+
+    [JSInvokable]
+    public static void GlobalMouseMove(double[] doubles)
+    {
+        // This method is called from JavaScript.
+        // The parameter is a JavaScript array that contains the mouse coordinates.
+        // The array is marshaled to a .NET array of doubles.
+
+        double clientX = doubles[0];
+        double clientY = doubles[1];
+        double pageX = doubles[2];
+        double pageY = doubles[3];
+        double screenX = doubles[4];
+        double screenY = doubles[5];
+        double movementX = doubles[6];
+        double movementY = doubles[7];
+        double offsetX = doubles[8];
+        double offsetY = doubles[9];
+        MouseEvent mouseEvent = new MouseEvent(clientX, clientY, screenX, screenY, pageX, pageY, offsetX, offsetY, movementX, movementY);
+        foreach (var handler in mouseHandlers.Values)
+        {
+            handler.Invoke(mouseEvent);
+        }
+
+    }
+
+    [JSInvokable]
+    public static void UpdatePreferences(string data)
+    {
+        var result = JsonSerializer.Deserialize<Dictionary<string, dynamic>>(data);
+        Instance.preferencesManager.SetFrom(result);
+    }
+
+    public static void SavePreferences(PreferencesManager pm)
+    {
+        Instance.preferencesSystem.InvokeVoidAsync("send", pm.Serialized());
+    }
+
+    [JSInvokable]
+    public static void GlobalMouseUp()
+    {
+
+        //Console.WriteLine("GlobalMouseUp");
+        foreach (var handler in mouseUpHandlers.Values)
+        {
+            handler.Invoke();
+        }
+
+    }
+
+    [JSInvokable]
+    public static void UpdateAddonData(string data)
+    {
+        JsonElement result = JsonSerializer.Deserialize<JsonElement>(data)!;
+        var lastActiveAddons = result.EnumerateArray().Select(x =>
+    {
+    return AddonManifest.FromJsonElement(x);
+    });
+        Home.addonManifests = lastActiveAddons.ToList();
+        Home.Instance.UpdatePanelData();
+
+    }
+
+    [JSInvokable]
+    public static void UpdatePanelData(string data)
+    {
+        if (data == null || data == "null")
+        {
+            return;
+        }
+        JsonElement result = JsonSerializer.Deserialize<JsonElement>(data)!;
+        var lastActivePanels = result.EnumerateArray().Select(x =>
+    {
+    return RuntimeCustomPanel.FromJsonElement(x);
+    });
+        Home.panels = lastActivePanels.ToList();
+        Home.Instance.UpdatePanelData();
+    }
+
+    [JSInvokable]
+    public static void UpdateBackgroundData(string data)
+    {
+        if (data == null || data == "null")
+        {
+            return;
+        }
+        JsonElement result = JsonSerializer.Deserialize<JsonElement>(data)!;
+        var res = result.GetProperty("NewBackgrounds").ToString();
+
+        if (res == null || res.Length == 0)
+        {
+            return;
+        }
+        var lastActiveBackgrounds = result.GetProperty("NewBackgrounds").EnumerateArray().Select(x =>
+    {
+    return RuntimeCustomBackground.FromJsonElement(x);
+    });
+        Home.backgrounds = lastActiveBackgrounds.ToList();
+        Home.currentBackground = result.GetProperty("NewActiveBackground").GetString()!;
+
+        Home.Instance.UpdatePanelData();
+    }
+
+
+    [JSInvokable]
+    public static void LoadPanelData(string data)
+    {
+        if (data == null || data == "null")
+        {
+            return;
+        }
+        JsonElement result = JsonSerializer.Deserialize<JsonElement>(data)!;
+        var availablePanels = result.GetProperty("AvailablePanels").EnumerateArray().Select(x =>
+    {
+    return RuntimeCustomPanel.FromJsonElement(x);
+    });
+        var availableTemplatePanels = result.GetProperty("AvailableTemplatePanels").EnumerateArray().Select(x =>
+    {
+    return TemplateCustomPanel.FromJsonElement(x);
+    });
+        var lastActivePanels = result.GetProperty("LastActivePanels").EnumerateArray().Select(x =>
+    {
+    return RuntimeCustomPanel.FromJsonElement(x);
+    });
+        var deletedPanels = result.GetProperty("DeletedPanels").EnumerateArray().Select(x =>
+    {
+    return RuntimeCustomPanel.FromJsonElement(x);
+    });
+        Home.SetData(availablePanels.ToList(), availableTemplatePanels.ToList(), lastActivePanels.ToList(), deletedPanels.ToList());
+        var embeddedpanels = availablePanels.Where(x => x.PanelType == "Embedded").ToList();
+    }
+
+    [JSInvokable]
+    public static void LoadBackgroundData(string data)
+    {
+        JsonElement result = JsonSerializer.Deserialize<JsonElement>(data)!;
+        var availableBackgrounds = result.GetProperty("AvailableBackgrounds").EnumerateArray().Select(x =>
+    {
+    return RuntimeCustomBackground.FromJsonElement(x);
+            });
+        var availableTemplateBackgrounds = result.GetProperty("AvailableTemplateBackgrounds").EnumerateArray().Select(x =>
+    {
+    return TemplateCustomBackground.FromJsonElement(x);
+    });
+        var lastActiveBackgrounds = result.GetProperty("LastActiveBackgrounds").EnumerateArray().Select(x =>
+    {
+    return RuntimeCustomBackground.FromJsonElement(x);
+    });
+        var deletedBackgrounds = result.GetProperty("DeletedBackgrounds").EnumerateArray().Select(x =>
+    {
+    return RuntimeCustomBackground.FromJsonElement(x);
+    });
+        var currentBackground = result.GetProperty("LastActiveBackgroundID").GetString()!;
+        Home.SetBackgroundData(availableBackgrounds.ToList(), availableTemplateBackgrounds.ToList(), lastActiveBackgrounds.ToList(), deletedBackgrounds.ToList(), currentBackground);
+        var embeddedBackgrounds = availableBackgrounds.Where(x => x.BackgroundType == "Embedded").ToList();
+    }
+
+    [JSInvokable]
+    public static bool IsDevEnvironment()
+    {
+        #if DEBUG
+    return true;
+        #else
+        return false;
+        #endif
+    }
+
+    [JSInvokable]
+    public static void PassPreferencesWebsocket(IJSInProcessObjectReference ws)
+    {
+        Instance.preferencesSystem = ws;
+    }
+
+    [JSInvokable]
+    public static void PassPanelWebsocket(IJSInProcessObjectReference ws)
+    {
+        Instance.panelSystem = ws;
+    }
+
+    [JSInvokable]
+    public static void PassRestartWebsocket(IJSInProcessObjectReference ws)
+    {
+        Instance.restartSystem = ws;
+    }
+
+    [JSInvokable]
+    public static void PassBackgroundWebsocket(IJSInProcessObjectReference ws)
+    {
+        Instance.backgroundSystem = ws;
+    }
+
+    public static void SaveBackgroundData(List<RuntimeCustomBackground> panels)
+    {
+        Console.WriteLine("Saving background data");
+        var request = new BackgroundUpdate();
+        request.NewBackgrounds = Home.backgrounds;
+        request.NewActiveBackground = Home.currentBackground;
+        var serialized = JsonSerializer.Serialize(request);
+        Console.WriteLine(serialized);
+        Instance.backgroundSystem.InvokeVoidAsync("send", serialized);
+    }
+
+    public static void SavePanelData(List<RuntimeCustomPanel> panels)
+    {
+        Console.WriteLine("Saving panel data");
+        var serialized = JsonSerializer.Serialize(panels);
+        Instance.panelSystem.InvokeVoidAsync("send", serialized);
+    }
+
+    public static void DisableSelection()
+    {
+        Instance.enableSelection = false;
+        Instance.StateHasChanged();
+    }
+
+    public static void EnableSelection()
+    {
+        Instance.enableSelection = true;
+        Instance.StateHasChanged();
+    }
+
+    public static MouseHandler CreateMouseHandler(Action<MouseEvent> action)
+    {
+        string id = Guid.NewGuid().ToString();
+        MouseHandler handler = new MouseHandler(action, () =>
+        {
+            mouseHandlers.Remove(id);
+            mouseHandlers.Clear();
+        });
+        mouseHandlers.Add(id, handler);
+        return handler;
+    }
+
+    public static MouseUpHandler CreateMouseUpHandler(Action action)
+    {
+        string id = Guid.NewGuid().ToString();
+        MouseUpHandler handler = new MouseUpHandler(action, () =>
+        {
+            mouseUpHandlers.Remove(id);
+            mouseUpHandlers.Clear();
+        });
+        mouseUpHandlers.Add(id, handler);
+        return handler;
+    }
+
+
+}

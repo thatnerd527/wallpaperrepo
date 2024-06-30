@@ -1,0 +1,276 @@
+﻿@page "/"
+@inject IJSRuntime JS
+
+<div class="card absolute right-0 top-0 m-4 flex-col items-center justify-center" style="
+            z-index: 2;
+            padding: 24px;
+            display: @((!connectionStatus) ? "flex" : "none");
+">
+    <div class="flex h-full w-full flex-row">
+        <FluentIcon Value="@(new Icons.Regular.Size24.Warning())">
+
+        </FluentIcon>
+        <div class="w-4"></div>
+        UI Server connection terminated unexpectedly.
+    </div>
+    <div class="h-4"></div>
+    <div class="flex w-full flex-row justify-center justify-items-end">
+        <FluentButton Style="width: 100%;" @onclick="ReloadUI">
+            Reload UI
+        </FluentButton>
+    </div>
+</div>
+<div class="card absolute right-0 top-0 m-4 flex-col items-center justify-center" style="
+            z-index: 2;
+            padding: 24px;
+            display: @((restartInProgress) ? "flex" : "none");
+            width: 256px;
+">
+    <div class="flex h-full w-full flex-row">
+        <FluentIcon Value="@(new Icons.Regular.Size24.ArrowClockwise())">
+
+        </FluentIcon>
+        <div class="w-4"></div>
+        Restart in progress.
+    </div>
+    <div class="h-4"></div>
+    <div class="w-full">
+        <FluentProgress></FluentProgress>
+    </div>
+</div>
+
+@if (mode == "wallpaper")
+{
+
+    <div style="height: 100%; background-color: transparent; overflow: clip" class="text-white" >
+        <div class="absolute h-full w-full object-cover">
+            <Background runtimeCustomBackground="@backgrounds.FirstOrDefault(x => x.PersistentBackgroundID == currentBackground)" saveAction="() => {
+            App.SavePanelData(panels);
+        }" />
+         </div>
+    <img src="./assets/background.png" class="pointer-events-none absolute h-full w-full object-cover" style="z-index: -1"/>
+        
+    <div class="card absolute bottom-0 m-4 mb-16 p-4" style="
+      width: 256px;
+      height: 80px;
+      right: 0px;
+      display: @((loading) ? "block" : "none");
+    ">
+        <div class="font-bold">Loading wallpaper..</div>
+        <div class="mt-4">
+        </div>
+        <FluentProgress></FluentProgress>
+    </div>
+    <div class="absolute top-0 m-4 p-4" style="
+      width: 256px;
+      height: 80px;
+      right: 0px;
+      display: none;
+    ">
+        <Card IsDraggable="false" IsResizable="false">
+            <div class="flex h-full w-full flex-col items-center" style="
+                overflow: overlay
+            ">
+                <h2 style="
+                    font-size: 1.5rem;
+                    font-weight: 600;
+                    color: white;
+                    margin-bottom: 1rem;
+                    margin-top: 1rem;
+                ">Add panels</h2>
+                <FluentListbox TOption="string" ValueChanged="@(e => listboxValue = e)" Height="100%" Width="100%" Style="
+                    overflow: clip
+">
+                    @foreach (var panel in availablePanels)
+                    {
+                        <FluentOption Value="@panel.LoaderPanelID">"@panel.LoaderPanelID" Created By: @panel.ClientID</FluentOption>
+                        <div class="h-2"></div>
+                    }
+                    
+                </FluentListbox>
+                <div class="h-8">
+                    
+                </div>
+                <FluentButton IconStart="@(new Icons.Regular.Size16.Add())" Style="
+                    min-height: 32px;
+                " Disabled="!availablePanels.Select(x => x.LoaderPanelID).Contains(listboxValue)" @onclick="() => {
+                        AddPanel(listboxValue);
+                }">
+                    Add
+                </FluentButton>
+            </div>
+        </Card>
+    </div>
+        <div style="
+        width: 100vw;
+        height: 100vh;
+        overflow: hidden;
+        position: absolute;
+        top: 0px;
+left: 0px;
+    ">
+            @foreach (var panel in panels)
+            {
+
+                @RenderPanel(panel.PersistentPanelID)
+            }
+        </div>
+    <div style="
+        position: absolute;
+        bottom: 0px;
+        right: 0px;
+        overflow: hidden;
+        margin: 16px;
+        min-height: 16px;
+        min-width: 16px;
+        margin-bottom: 64px;
+        padding: 8px;
+    " class="card">
+        <FluentButton IconEnd="@(new Icons.Regular.Size16.Settings())"
+                      Title="Settings" 
+                      @onclick="OpenSettings"
+                      />
+    </div>
+    
+
+    
+</div>
+
+} else if (mode == "settings")
+{
+    <div style="
+        position: absolute;
+        top: 0px;
+        left: 0px;
+        width: 100vw;
+        height: 100vh;
+    ">
+        <Settings home="this" />
+    </div>
+}
+
+@code {
+    string? listboxValue = "";
+    public static List<RuntimeCustomPanel> availablePanels = new List<RuntimeCustomPanel>();
+    public static List<TemplateCustomPanel> availableTemplatePanels = new List<TemplateCustomPanel>();
+    public static List<RuntimeCustomPanel> panels = new List<RuntimeCustomPanel>();
+    public static List<RuntimeCustomPanel> deletedPanels = new List<RuntimeCustomPanel>();
+    public static List<PanelHeader> panelHeaders = new List<PanelHeader>();
+
+    public static List<RuntimeCustomBackground> availableBackgrounds = new();
+    public static List<TemplateCustomBackground> availableTemplateBackgrounds = new();
+    public static List<RuntimeCustomBackground> backgrounds = new();
+    public static List<RuntimeCustomBackground> deletedBackground = new();
+
+    public static List<AddonManifest> addonManifests = new();
+
+    public static string currentBackground = null;
+    public static bool connectionStatus = true;
+    public static bool restartInProgress = false;
+
+    public static Home Instance = null;
+    private bool loading = true;
+    public string mode = "panel";
+
+    protected override async Task OnInitializedAsync()
+    {
+        Instance = this;
+        mode = await JS.InvokeAsync<string>("mode") == null ? "wallpaper" : await JS.InvokeAsync<string>("mode");
+        await JS.InvokeVoidAsync("dotnetready");
+
+    }
+
+    private async void ReloadUI()
+    {
+        await JS.InvokeVoidAsync("reloadui");
+    }
+
+    private async void OpenSettings()
+    {
+        await JS.InvokeVoidAsync("opensettings");
+    }
+
+    [JSInvokable]
+    public static void SetRestart()
+    {
+        restartInProgress = true;
+        Instance.StateHasChanged();
+    }
+
+    public void UpdatePanelData()
+    {
+        StateHasChanged();
+    }
+
+    [JSInvokable]
+    public static void SetConnectionStatus(bool status)
+    {
+        connectionStatus = status;
+        Instance.StateHasChanged();
+    }
+
+    public RenderFragment RenderPanel(string persistentPanelID)
+    {
+        var panel = panels.FirstOrDefault(x => x.PersistentPanelID == persistentPanelID);
+        return @<Panel runtimeCustomPanel="@panel" saveAction="() => {
+            App.SavePanelData(panels);
+        }" closeAction="() => {
+            panels.Remove(panel);
+            App.SavePanelData(panels);
+            StateHasChanged();
+        }"/>
+    ;
+    }
+
+    public static void SetData(List<RuntimeCustomPanel> availablePanels2, List<TemplateCustomPanel> availableTemplatePanels2, List<RuntimeCustomPanel> panels2, List<RuntimeCustomPanel> deletedPanels2)
+    {
+        availablePanels = availablePanels2;
+        availableTemplatePanels = availableTemplatePanels2;
+        panels = panels2;
+        deletedPanels = deletedPanels2;
+
+        Console.WriteLine(availablePanels2.Count);
+        Console.WriteLine("Data set");
+        Instance.loading = false;
+        Instance.StateHasChanged();
+    }
+
+    public static void SetBackgroundData(List<RuntimeCustomBackground> availableBackgrounds2, List<TemplateCustomBackground> availableTemplateBackgrounds2, List<RuntimeCustomBackground> backgrounds2, List<RuntimeCustomBackground> deletedBackground2, string currentBackground2)
+    {
+        availableBackgrounds = availableBackgrounds2;
+        availableTemplateBackgrounds = availableTemplateBackgrounds2;
+        backgrounds = backgrounds2;
+        deletedBackground = deletedBackground2;
+        currentBackground = currentBackground2;
+        Console.WriteLine("Background data set");
+        Instance.loading = false;
+        Instance.StateHasChanged();
+    }
+
+    public void SetBackground(string backgroundID)
+    {
+        if (backgrounds.Any(x => x.LoaderBackgroundID == backgroundID))
+        {
+            currentBackground = backgrounds.FirstOrDefault(x => x.LoaderBackgroundID == backgroundID).PersistentBackgroundID;
+        } else
+        {
+            var background = availableBackgrounds.FirstOrDefault(x => x.LoaderBackgroundID == backgroundID).Cloned();
+            backgrounds.Add(background);
+            currentBackground = background.PersistentBackgroundID;
+        }
+        App.SaveBackgroundData(backgrounds);
+        StateHasChanged();
+    }
+
+    public RuntimeCustomPanel AddPanel(String panelID)
+    {
+        var cloned = availablePanels.FirstOrDefault(x => x.LoaderPanelID == panelID)!.Cloned();
+
+        cloned.PersistentPanelID = Guid.NewGuid().ToString();
+
+        panels.Add(cloned);
+        App.SavePanelData(panels);
+        StateHasChanged();
+        return cloned;
+    }
+}

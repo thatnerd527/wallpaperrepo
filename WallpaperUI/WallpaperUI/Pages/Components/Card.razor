@@ -1,0 +1,194 @@
+﻿@inject IJSRuntime JS
+
+<div class="card" style="
+    position: absolute;
+    top: @(Y)px;
+    left: @(X)px;
+    min-height: @(Height)px;
+    min-width: @(Width)px;
+    max-width: @(Width)px;
+    overflow: hidden;
+    
+">
+    <div class="flex h-full w-full flex-col" style="height: @(Height)px;">
+            
+            <div class="flex w-full flex-row items-center justify-center p-2" style="
+                border-radius: 12px;
+                border-bottom-left-radius: 0px;
+                border-bottom-right-radius: 0px;
+                background-color: rgba(0,0,0,0.5);
+                min-height: 48px;
+                min-width: @(Width)px;
+                max-width: @(Width)px;
+                @(panelHeader != null ? (panelHeader.titlebarvisible ? "" : "display:none;") : "")
+            "
+                 @onmousedown="mouseDown">
+                    <div class="flex w-full flex-row items-center justify-center align-middle">
+                        <div style="
+                            width: 38px;
+                            height: 5px;
+                            border-radius:12px;
+                           " class="bg-gray-700">
+                        </div>
+                    </div>@captionBar
+             </div>
+        <div class="h-full w-full" style="
+            overflow: overlay;
+            pointer-events: @(App.Instance.enableSelection ? "auto" : "none");
+            
+        ">
+             @ChildContent
+        </div>
+
+        </div>
+        <div class="flex w-full flex-row" style="
+    @(panelHeader != null ? (panelHeader.enableresize ? "" : "display:none;") : "")
+"> 
+            <div class="w-full"></div>
+            <div class="h-full cursor-se-resize p-1" style="border-radius: 12px" @onmousedown="mouseDownResize">
+                <FluentIcon Value="@(new Icons.Regular.Size16.ArrowMaximize())"></FluentIcon>
+            </div>
+        </div>
+    </div>
+
+
+@code {
+    [Parameter] public RenderFragment ChildContent { get; set; }
+
+    [Parameter] public RenderFragment captionBar { get; set; }
+
+    [Parameter] public double X { get; set; } = 0;
+
+    [Parameter] public double Y { get; set; } = 0;
+
+
+    [Parameter] public double MinWidth { get; set; } = 256;
+
+    [Parameter] public double MaxWidth { get; set; } = 256;
+
+    [Parameter] public double MinHeight { get; set; }
+
+    [Parameter] public double MaxHeight { get; set; }
+
+    private double _width = 256;
+
+    [Parameter] public double Width {
+        get => _width;
+        set {
+            _width = Math.Max(MinWidth, Math.Min(MaxWidth, value));
+        }
+    }
+
+
+    private double _height = 500;
+
+    [Parameter] public double Height
+    {
+        get => _height;
+        set {
+            _height = Math.Max(MinHeight, Math.Min(MaxHeight, value));
+        }
+    }
+
+
+
+    [Parameter] public Boolean IsResizable { get; set; } = true;
+
+    [Parameter] public Boolean IsDraggable { get; set; } = true;
+
+    [Parameter] public PanelHeader panelHeader { get; set; }
+
+    [Parameter] public Action<Card> stateChanged { get; set; }
+
+    private bool dragging = false;
+    private bool resizing = false;
+
+    public MouseHandler mouseHandlerMove;
+    public MouseHandler mouseHandlerResize;
+    public MouseUpHandler mouseUpHandler;
+    public MouseUpHandler mouseUpHandlerResize;
+
+    public void mouseDown(MouseEventArgs e)
+    {
+        if (!IsDraggable)
+        {
+            return;
+        }
+        mouseHandlerMove = App.CreateMouseHandler((e2) =>
+        {
+            StateHasChanged();
+            mouseMove(e2);
+        });
+        mouseUpHandler = App.CreateMouseUpHandler(() =>
+        {
+
+            mouseUp();
+        });
+        dragging = true;
+        App.DisableSelection();
+    }
+
+    public void mouseDownResize(MouseEventArgs e)
+    {
+        if (!IsResizable)
+        {
+            return;
+        }
+        mouseHandlerResize = App.CreateMouseHandler((e2) =>
+        {
+            StateHasChanged();
+            mouseMoveResize(e2);
+        });
+        mouseUpHandlerResize = App.CreateMouseUpHandler(() =>
+        {
+            mouseUpResize();
+        });
+        resizing = true;
+        App.DisableSelection();
+    }
+
+    public void mouseMove(MouseEvent e)
+    {
+        if (dragging)
+        {
+            //Console.WriteLine("MovementX:" + e.MovementX + "MovementY: " + e.MovementY);
+            X = X + e.MovementX;
+            Y = Y + e.MovementY;
+        }
+
+    }
+
+    public void mouseMoveResize(MouseEvent e)
+    {
+        if (resizing)
+        {
+            Width = Width + e.MovementX;
+            Height = Math.Max(Height + e.MovementY,50);
+        }
+
+    }
+
+    public void mouseUp()
+    {
+        mouseHandlerMove.Destroy();
+        mouseUpHandler.Destroy();
+        App.EnableSelection();
+        if (stateChanged != null)
+        {
+            stateChanged(this);
+        }
+        dragging = false;
+    }
+
+    public void mouseUpResize()
+    {
+        mouseHandlerResize.Destroy();
+        mouseUpHandlerResize.Destroy();
+        App.EnableSelection();
+        if (stateChanged != null)
+        {
+            stateChanged(this);
+        }
+        resizing = false;
+    }
+}

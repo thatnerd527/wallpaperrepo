@@ -1,0 +1,13 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+.card {
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    background-color: rgba(17, 25, 40, 0.5);
+    border-radius: 12px;
+    border: 1px solid rgba(255, 255, 255, 0.125);
+}
+
+:root,:host{--md-sys-color-background:#13140d;--md-sys-color-on-background:#e5e3d6;--md-sys-color-surface:#13140d;--md-sys-color-surface-dim:#13140d;--md-sys-color-surface-bright:#3a3a31;--md-sys-color-surface-container-lowest:#0e0f08;--md-sys-color-surface-container-low:#1c1c15;--md-sys-color-surface-container:#202018;--md-sys-color-surface-container-high:#2a2a22;--md-sys-color-surface-container-highest:#35352d;--md-sys-color-on-surface:#e5e3d6;--md-sys-color-surface-variant:#474838;--md-sys-color-on-surface-variant:#c8c8b3;--md-sys-color-inverse-surface:#e5e3d6;--md-sys-color-inverse-on-surface:#313129;--md-sys-color-outline:#92927f;--md-sys-color-outline-variant:#474838;--md-sys-color-shadow:#000000;--md-sys-color-scrim:#000000;--md-sys-color-surface-tint:#c4ce62;--md-sys-color-primary:#c4ce62;--md-sys-color-on-primary:#2f3300;--md-sys-color-primary-container:#596000;--md-sys-color-on-primary-container:#ffffff;--md-sys-color-inverse-primary:#5c6300;--md-sys-color-secondary:#c7ca97;--md-sys-color-on-secondary:#2f330e;--md-sys-color-secondary-container:#3f421c;--md-sys-color-on-secondary-container:#d5d8a4;--md-sys-color-tertiary:#90d78e;--md-sys-color-on-tertiary:#00390d;--md-sys-color-tertiary-container:#24682d;--md-sys-color-on-tertiary-container:#ffffff;--md-sys-color-error:#ffb4ab;--md-sys-color-on-error:#690005;--md-sys-color-error-container:#93000a;--md-sys-color-on-error-container:#ffdad6;}
