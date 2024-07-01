@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strconv"
 
+	"github.com/getlantern/systray"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/orcaman/concurrent-map/v2"
@@ -103,7 +104,9 @@ func main() {
 	}()
 	startPopupApp()
 	fmt.Println("Listening on port", unused)
-	systray.Run(onReady, onExit)
+	go func() {
+		systray.Run(createTray, func() {})
+	}()
 	http.ListenAndServe(fmt.Sprintf("127.0.0.1:%v",unused), secureMux)
 
 
