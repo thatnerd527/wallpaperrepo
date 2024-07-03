@@ -1,0 +1,87 @@
+﻿@using System.Text.Json
+@RenderInternals()
+
+@inject IJSRuntime JS
+@code {
+
+    protected override async Task OnInitializedAsync()
+    {
+        App.Instance.preferencesManager.AddChangeHandler((x) =>
+        {
+            
+            uniqueId = Guid.NewGuid().ToString();
+        StateHasChanged();
+            return x;
+        });
+
+    }
+
+    private int controlPort = 0;
+    private string uniqueId = Guid.NewGuid().ToString();
+
+    public string NameToType(string filename)
+    {
+        if (filename.EndsWith(".webm") || filename.EndsWith(".mp4")) {
+            return "Video";
+        } else if (
+                  filename.EndsWith(".jpg") || filename.EndsWith(".jpeg") || filename.EndsWith(".png") || 
+                  filename.EndsWith(".gif") || filename.EndsWith(".gifv") || filename.EndsWith(".svg") || 
+                  filename.EndsWith(".bmp") || filename.EndsWith(".avif") || filename.EndsWith(".webp")
+        )
+        {
+            return "Image";
+        } else {
+            return "Embedded";
+        }
+    }
+
+    public RenderFragment RenderInternals()
+    {
+        if (controlPort == 0)
+        {
+            controlPort = App.Instance.controlPort;
+        }
+        var pref = App.Instance.preferencesManager.GetOrDefault("simplebackground", false);
+        
+        if (pref is bool && !pref)
+        {
+            return @<div></div>;
+        }
+        else
+        {
+            var casted = ((JsonElement)pref).GetString();
+            var res = RenderInternals2(casted);
+            return @res;
+        } 
+
+    }
+
+
+
+    private RenderFragment RenderInternals2(string background)
+    {
+        //Console.WriteLine(runtimeCustomPanel.PanelType);
+        switch (NameToType(background))
+        {
+            case "Image":
+                return @<img src="@($"http://127.0.0.1:{controlPort}/simplebackground?id={uniqueId}")" class="pointer-events-none h-full w-full object-cover" />;
+            case "Video":
+                return@<div class="h-full w-full">
+                            <video style="
+                                                object-fit: cover;
+                                    " id="backgroundvideo" class="pointer-events-none h-full w-full">
+            <source src="@($"http://127.0.0.1:{controlPort}/simplebackground?id={uniqueId}")" type="video/webm" />
+                            </video>
+                            <script>
+                                var video = document.getElementById('backgroundvideo')
+                                video.muted = true;
+                                video.loop = true;
+                                video.play();
+                                console.log(video)
+                            </script>
+                        </div>;
+            default:
+                return @<div>Unknown background type. </div>;
+        }
+    }
+}

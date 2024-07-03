@@ -15,9 +15,12 @@ echo All projects built
 
 echo Step 2: Copying files to output folder
 mkdir .\output
+mkdir .\output\tools
 echo Copy UI Server
 echo touch > .\output\wallpaperuiserver.exe
 xcopy .\wallpaperUIServer\wallpaperuiserver.exe .\output /y
+xcopy .\wallpaperUIServer\icon.ico .\output /y
+xcopy .\wallpaperUIServer\tools .\output\tools /y /s
 echo Copy Electron App
 mkdir .\output\popupapp
 xcopy .\WallpaperPopupApp\out\wallpaperpopupapp-win32-x64\* .\output\popupapp /s /e /y
@@ -32,4 +35,3 @@ mkdir .\output\bootstrap
 xcopy .\wallpaperbootstrap\dist .\output\bootstrap /s /e /y
 
 echo Step 3: Done
-pause

@@ -31,6 +31,7 @@
     private IJSObjectReference backgroundSystem;
     private IJSObjectReference preferencesSystem;
     private IJSObjectReference restartSystem;
+    public int controlPort = 0;
     protected override async Task OnInitializedAsync()
     {
         Instance = this;
@@ -92,6 +93,12 @@
             handler.Invoke();
         }
 
+    }
+
+    [JSInvokable]
+    public static void PassControlPort(int port)
+    {
+        Instance.controlPort = port;
     }
 
     [JSInvokable]

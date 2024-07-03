@@ -25,6 +25,7 @@ var awaitingpopup = cmap.New[PopupRequest]()
 var secureport = 8080
 var allowedredirectport = 0
 var ELECTRON_PATH = "popupapp"
+var embedKey = "factory"
 
 type StorageChange struct {
 	Scope string
@@ -59,6 +60,16 @@ func startPopupApp() {
 
 
 func main() {
+	if _, err := os.Stat("embedkey"); os.IsNotExist(err) {
+		os.WriteFile("embedkey", []byte(embedKey), 0644)
+	} else {
+		data, err := os.ReadFile("embedkey")
+		if err != nil {
+			log.Println(err)
+		}
+		embedKey = string(data)
+	}
+
 	unused := FindUnusedPort()
 	secureport = unused
 	secureMux := http.NewServeMux()
@@ -79,6 +90,7 @@ func main() {
 	secureMux.HandleFunc("/restart",restartHandler)
 	secureMux.HandleFunc("/restartipc",restartIPC)
 	secureMux.HandleFunc("/installaddon",installAddon)
+	secureMux.HandleFunc("/simplebackground",simpleBackgroundHandler)
 
 	defaultMux := http.NewServeMux()
 	defaultMux.HandleFunc("/", fileHandler)
@@ -123,8 +135,9 @@ func mediaRegistry(w http.ResponseWriter, r *http.Request) {
 }
 
 func redirectHandler(w http.ResponseWriter, r *http.Request) {
-
-	w.Header().Set("Content-Security-Policy", "frame-ancestors 'none'")
+	if (!r.URL.Query().Has("embedkey") || r.URL.Query().Get("embedkey") != embedKey) {
+		w.Header().Set("Content-Security-Policy", "frame-ancestors 'none'")
+	}
 
 	url2 := r.URL.Query().Get("url")
 	newurl, err := url.Parse(url2)
@@ -146,7 +159,9 @@ func redirectHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func fileHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Security-Policy", "frame-ancestors 'none'")
+	if (!r.URL.Query().Has("embedkey") || r.URL.Query().Get("embedkey") != embedKey) {
+		w.Header().Set("Content-Security-Policy", "frame-ancestors 'none'")
+	}
 	http.ServeFile(w, r, path.Join("public", "wwwroot", r.URL.Path))
 }
 

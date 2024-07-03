@@ -5,18 +5,26 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"image"
+	"image/jpeg"
 	"image/png"
 	"io"
 	"os"
 	"strconv"
 )
 
+var pluginstarted = false
+
 type BAPNGConfig struct {
 	Width  int
 	Height int
 	DesiredFPS int
-	NumberOfFrames int
+	NumberOfFrames uint64
 	framesread uint64
+}
+
+type BAPNGFrame struct {
+	FrameNumber uint64
+	Codec string
 }
 
 type BAPNG struct {
@@ -43,7 +51,7 @@ func decodeHeader(header []byte) (BAPNGConfig, error) {
 	config.Width = int(decoded["Width"].(float64))
 	config.Height = int(decoded["Height"].(float64))
 	config.DesiredFPS = int(decoded["DesiredFPS"].(float64))
-	config.NumberOfFrames = int(decoded["NumberOfFrames"].(float64))
+	config.NumberOfFrames = uint64(decoded["NumberOfFrames"].(float64))
 	return config, nil
 }
 
@@ -85,19 +93,47 @@ func (bapng *BAPNG) WriteHeader() (error) {
 	return nil
 }
 
-func (bapng *BAPNG) WriteNextFrame(img image.Image) (error) {
+func (bapng *BAPNG) WriteNextFrameAsPNG(img image.Image) (error) {
 	buffer := new(bytes.Buffer)
 	err := png.Encode(buffer, img)
 	if err != nil {
 		return err
 	}
-	return bapng.WriteNextFrameRAW(buffer.Bytes())
+	config := BAPNGFrame{FrameNumber: uint64(bapng.config.NumberOfFrames), Codec: "PNG"}
+	return bapng.WriteNextFrameRAW(buffer.Bytes(),config)
 }
 
-func (bapng *BAPNG) WriteNextFrameRAW(image []byte) (error) {
+func (bapng *BAPNG) WriteNextFrameAsJPEG(img image.Image, quality int) (error) {
+	buffer := new(bytes.Buffer)
+	jpgeoptions := &jpeg.Options{
+		Quality: quality,
+	}
+	err := EncodeJPEG(buffer, img, jpgeoptions)
+	if err != nil {
+		return err
+	}
+	config := BAPNGFrame{FrameNumber: uint64(bapng.config.NumberOfFrames), Codec: "JPEG"}
+	return bapng.WriteNextFrameRAW(buffer.Bytes(),config)
+}
+
+func (bapng *BAPNG) WriteNextFrameRAW(image []byte, frameconfig BAPNGFrame) (error) {
 	// Encode the image
 	buffer := new(bytes.Buffer)
-	_, err := buffer.Write(image)
+	// Write the frame config
+	frameconfigjson, err := json.Marshal(frameconfig)
+	if err != nil {
+		return err
+	}
+	encodedFrameConfig := base64.StdEncoding.EncodeToString(frameconfigjson)
+	_, err = buffer.Write([]byte(encodedFrameConfig))
+	if err != nil {
+		return err
+	}
+	_, err = buffer.Write([]byte("\x0A"))
+	if err != nil {
+		return err
+	}
+	_, err = buffer.Write(image)
 	if err != nil {
 		return err
 	}
@@ -115,6 +151,9 @@ func (bapng *BAPNG) WriteNextFrameRAW(image []byte) (error) {
 	if err != nil {
 		return err
 	}
+	dup := bapng.config
+	dup.NumberOfFrames = dup.NumberOfFrames + 1
+	bapng.config = dup
 	return nil
 }
 
@@ -128,38 +167,44 @@ func (bapng *BAPNG) Close() (error) {
 	return nil
 }
 
-func (bapng *BAPNG) ReadNextFrame() (image.Image, error) {
-	image, err := bapng.ReadNextFrameAsPNG()
+func (bapng *BAPNG) ReadNextFrame() (image.Image, *BAPNGFrame, error) {
+	image, config, err := bapng.ReadNextFrameRAW()
 	if err != nil {
-		return nil, err
+		return nil, config, err
 	}
-	img, err := png.Decode(bytes.NewReader(image))
+	img, err := UniversalDecoder(image, config.Codec)
 	if err != nil {
-		return nil, err
+		return nil, config, err
 	}
-	return img, nil
+	return img, config, nil
 }
 
-func (bapng *BAPNG) ReadNextFrameAsPNG() ([]byte, error) {
+func (bapng *BAPNG) ReadNextFrameRAW() ([]byte,*BAPNGFrame, error) {
 	// Read the image length
 	if bapng.config.framesread >= uint64(bapng.config.NumberOfFrames) {
-		return nil, io.EOF
+		return nil,nil, io.EOF
 	}
 
 	imageLength, err := readAllUntilByte(bapng.imageStream, 0x0A)
 	if err != nil {
-		return nil, err
+		return nil,nil, err
 	}
 	stringed := string(imageLength)
 	number, _ := strconv.ParseUint(stringed, 10, 64)
 	// Read the image
 	imageData := make([]byte, number)
 	_, err = (bapng.imageStream).Read(imageData)
+	reader := bytes.NewReader(imageData)
+	// Read the frame config
+	frameConfig, err := readAllUntilByte(reader, 0x0A)
+	decoded , err := base64.StdEncoding.DecodeString(string(frameConfig))
+	parsed := BAPNGFrame{}
+	err = json.Unmarshal(decoded, &parsed)
 	if err != nil {
-		return nil, err
+		return nil,nil, err
 	}
 	bapng.config.framesread++
-	return imageData, nil
+	return imageData[len(frameConfig)+1:],&parsed, nil
 }
 
 
@@ -187,39 +232,43 @@ func (bapng *BAPNG) GetHeight() (int) {
 	return bapng.config.Height
 }
 
-func (bapng *BAPNG) GetNumberOfFrames() (int) {
+func (bapng *BAPNG) GetNumberOfFrames() (uint64) {
 	return bapng.config.NumberOfFrames
 }
 
-func (bapng *BAPNG) ReadAllFramesAsPNG() ([][]byte, error) {
+func (bapng *BAPNG) ReadAllFramesAsRAW() ([][]byte, []*BAPNGFrame, error) {
 	frames := make([][]byte, bapng.config.NumberOfFrames)
-	for i := 0; i < bapng.config.NumberOfFrames; i++ {
-		frame, err := bapng.ReadNextFrameAsPNG()
+	frameconfigs := make([]*BAPNGFrame, bapng.config.NumberOfFrames)
+	for i := uint64(0); i < bapng.config.NumberOfFrames; i++ {
+		frame, config, err := bapng.ReadNextFrameRAW()
 		if err != nil {
-			return frames, err
+			return frames, frameconfigs, err
 		}
+		frameconfigs[i] = config
 		frames[i] = frame
 	}
-	return frames, nil
+	return frames,frameconfigs, nil
 }
 
-func (bapng *BAPNG) ReadAllFrames() ([]image.Image, error) {
+func (bapng *BAPNG) ReadAllFrames() ([]image.Image, []*BAPNGFrame, error) {
 	frames := make([]image.Image, bapng.config.NumberOfFrames)
-	for i := 0; i < bapng.config.NumberOfFrames; i++ {
-		frame, err := bapng.ReadNextFrame()
+	frameconfigs := make([]*BAPNGFrame, bapng.config.NumberOfFrames)
+	for i := uint64(0); i < bapng.config.NumberOfFrames; i++ {
+		frame, config, err := bapng.ReadNextFrame()
 		if err != nil {
-			return frames, err
+			return frames, frameconfigs, err
 		}
 		frames[i] = frame
+		frameconfigs[i] = config
 	}
-	return frames, nil
+	return frames, frameconfigs, nil
 }
 
 
 
 func (bapng *BAPNG) WriteAllFrames(frames []image.Image) (error) {
 	for i := 0; i < len(frames); i++ {
-		err := bapng.WriteNextFrame(frames[i])
+		err := bapng.WriteNextFrameAsPNG(frames[i])
 		if err != nil {
 			return err
 		}

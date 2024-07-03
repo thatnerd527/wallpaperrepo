@@ -14,7 +14,7 @@ window.mode = function () {
 }
 
 window.reloadui = function () {
-    window.location.reload();
+    window.top.postMessage("reload", "*")
 }
 
 function setupPanelConnection() {
@@ -214,11 +214,12 @@ if (controlPort == null) {
 } else {
     var newurl = new URL(window.location.href)
     newurl.searchParams.delete("controlPort")
+    newurl.searchParams.delete("embedkey")
     window.restart = async function () {
         let request = new URL(`http://127.0.0.1:${controlPort}/restart`)
         DotNet.invokeMethod("WallpaperUI", "SetRestart");
         await fetch(request.toString())
-        window.location.reload();
+        window.top.postMessage("reload", "*")
     }
 
     window.remoterestart = function () {
@@ -227,13 +228,9 @@ if (controlPort == null) {
         restartipc.send("restart");
     }
 
-    window.getcontrolport = function () {
-        return controlPort;
-    }
-
     window.history.replaceState({ path: newurl.toString() }, '', newurl.toString());
     window.dotnetready = function () {
-
+        DotNet.invokeMethod("WallpaperUI", "PassControlPort", Number.parseInt(controlPort));
         setupBackgroundConnection().then(() => {
             setupPanelConnection().then(() => {
                 setupPreferencesConnection().then(() => {
@@ -249,6 +246,7 @@ if (controlPort == null) {
                 DotNet.invokeMethod("WallpaperUI", "UpdateAddonData",y);
             })
         });
+        window.top.postMessage("ready", "*");
     }
 
     window.opensettings = function () {

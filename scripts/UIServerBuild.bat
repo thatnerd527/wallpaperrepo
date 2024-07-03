@@ -1,4 +1,4 @@
 @echo off
 cd .\wallpaperUIServer
-go build
+go build -ldflags "-H windowsgui"
 cd .. && exit

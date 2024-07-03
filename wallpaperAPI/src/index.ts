@@ -14,6 +14,11 @@ import * as Type from "./types";
 import { BackgroundDummy } from "./endpoints/background";
 import { AddonDummy } from "./endpoints/addon";
 
+Environment.controlPort =
+  new URL(window.location.href).searchParams.get("controlPort") == null
+    ? 8080
+    : parseInt(new URL(window.location.href).searchParams.get("controlPort")!);
+
 StorageDummy();
 SharingDummy();
 PopupDummy();
@@ -22,10 +27,7 @@ BackgroundDummy();
 AddonDummy();
 
 console.log(Environment.endpointRegister.generateClientSDK());
-Environment.controlPort =
-  new URL(window.location.href).searchParams.get("controlPort") == null
-    ? 8080
-    : parseInt(new URL(window.location.href).searchParams.get("controlPort")!);
+
 
 Environment.addons = [];
 console.log("Control Port: " + Environment.controlPort);

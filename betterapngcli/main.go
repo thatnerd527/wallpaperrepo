@@ -6,6 +6,7 @@ import (
 	"image/png"
 	"os"
 	"strconv"
+	"strings"
 
 	"github.com/thatnerd/betterapng"
 )
@@ -48,6 +49,22 @@ func sortFiles(files []string) []string {
 		}
 	}
 	return sorted
+}
+
+func nameToCodec(name string) string {
+	if (strings.HasSuffix(strings.ToLower(name), ".png")) {
+		return "PNG"
+	}
+	if (strings.HasSuffix(strings.ToLower(name), ".avif")) {
+		return "AVIF"
+	}
+	if (strings.HasSuffix(strings.ToLower(name), ".webp")) {
+		return "WEBP"
+	}
+	if (strings.HasSuffix(strings.ToLower(name), ".jpg") || strings.HasSuffix(strings.ToLower(name), ".jpeg")) {
+		return "JPEG"
+	}
+	return "UNKNOWN"
 }
 
 func readFolder(folder string) ([]string, error) {
@@ -101,7 +118,7 @@ func main() {
 			Width: img.Bounds().Dx(),
 			Height: img.Bounds().Dy(),
 			DesiredFPS: int(*fps),
-			NumberOfFrames: len(files),
+			NumberOfFrames: uint64(len(files)),
 		}
 		firstfile.Close()
 		// Create a new BAPNG
@@ -109,12 +126,19 @@ func main() {
 		bapng.WriteHeader()
 
 		// Add the images to the BAPNG
-		for _, file := range files {
-			file, err := os.ReadFile(file)
+		for i, filen := range files {
+			file, err := os.ReadFile(filen)
 			if err != nil {
 				panic(err)
 			}
-			bapng.WriteNextFrameRAW(file)
+			fc := betterapng.BAPNGFrame{
+				FrameNumber: uint64(i),
+				Codec: nameToCodec(filen),
+			}
+			err = bapng.WriteNextFrameRAW(file,fc)
+			if err != nil {
+				panic(err)
+			}
 		}
 		// Close the BAPNG
 		err = bapng.Close()
@@ -131,14 +155,14 @@ func main() {
 			panic(err)
 		}
 		// Read all the frames
-		frames, err := bapng.ReadAllFrames()
+		frames, configs, err := bapng.ReadAllFrames()
 		fmt.Println("Decoded", len(frames), "frames")
 		if err != nil {
 			panic(err)
 		}
 		// Write the frames to the output folder
 		for i, frame := range frames {
-			file, err := os.Create(*output + "/frame" + strconv.Itoa(i) + ".png")
+			file, err := os.Create(*output + "/frame" + strconv.Itoa(i) + "." + configs[i].Codec)
 			png.Encode(file, frame)
 			if err != nil {
 				panic(err)

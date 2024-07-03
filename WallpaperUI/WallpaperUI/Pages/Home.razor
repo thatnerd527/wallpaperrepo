@@ -44,9 +44,7 @@
 
     <div style="height: 100%; background-color: transparent; overflow: clip" class="text-white" >
         <div class="absolute h-full w-full object-cover">
-            <Background runtimeCustomBackground="@backgrounds.FirstOrDefault(x => x.PersistentBackgroundID == currentBackground)" saveAction="() => {
-            App.SavePanelData(panels);
-        }" />
+            @RenderBackgroundInternals()
          </div>
     <img src="./assets/background.png" class="pointer-events-none absolute h-full w-full object-cover" style="z-index: -1"/>
         
@@ -174,9 +172,16 @@ left: 0px;
 
     protected override async Task OnInitializedAsync()
     {
+
         Instance = this;
+        App.Instance.preferencesManager.AddChangeHandler((x) =>
+        {
+            StateHasChanged();
+            return x;
+        });
         mode = await JS.InvokeAsync<string>("mode") == null ? "wallpaper" : await JS.InvokeAsync<string>("mode");
         await JS.InvokeVoidAsync("dotnetready");
+
 
     }
 
@@ -188,6 +193,20 @@ left: 0px;
     private async void OpenSettings()
     {
         await JS.InvokeVoidAsync("opensettings");
+    }
+
+    private RenderFragment RenderBackgroundInternals()
+    {
+        if (App.Instance.preferencesManager.GetOrDefault("simplebackground", false) is bool && !(bool)App.Instance.preferencesManager.GetOrDefault("simplebackground", false))
+        {
+            return@<Background runtimeCustomBackground="@backgrounds.FirstOrDefault(x => x.PersistentBackgroundID == currentBackground)" saveAction="() => {
+                            App.SavePanelData(panels);
+                        }" />;
+        }
+        else
+        {
+            return @<SimpleBackground />;
+        }
     }
 
     [JSInvokable]

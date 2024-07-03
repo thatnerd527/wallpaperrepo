@@ -26,7 +26,6 @@
 /betterapngcli/benchmark.bapng
 /betterapngcli/benchmark.ove
 /betterapng/.history
-/wallpaperInstaller/assets
 /wallpaperInstaller/installing.bapng
 /wallpaperInstaller/installing2.bapng
 /wallpaperInstaller/.history
@@ -34,3 +33,9 @@ wallpaperUIServer/addons/addontemplate/media/backgrounds/Sequence 2.webm
 wallpaperUIServer/addons/addontemplate/media/backgrounds/Alex_Audio_Event_Live_Wallpaper_Fix_Compressed.mp4
 wallpaperUIServer/addons/addontemplate/media/backgrounds/image_3.jpg
 wallpaperUIServer/addons/addontemplate/media/backgrounds/Sequence 1.webm
+wallpaperUIServer/embedkey
+wallpaperUIServer/storage/panels.json
+wallpaperInstaller/wallpaperInstaller.zip
+wallpaperInstaller/install.zip
+wallpaperUIServer/preferences.json
+/packaged

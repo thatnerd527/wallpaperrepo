@@ -38,7 +38,7 @@
             <div class="h-8"></div>
             <div class="card flex flex-row items-center justify-center p-4">
                 <FluentButton @onclick="@(async () => {
-                    var req = await JS.InvokeAsync<int>("getcontrolport");
+                    var req = App.Instance.controlPort;
                     var res = new UriBuilder(
                         new Uri("http://localhost:" + req + "/installaddon")
                     );
@@ -60,7 +60,7 @@
                 </FluentButton>
                 <div class="w-4"></div>
                 <FluentButton @onclick="@(async() => {
-                    var req = await JS.InvokeAsync<string>("getcontrolport");
+                    var req = App.Instance.controlPort;
 
                     var res = new UriBuilder(
                         new Uri("http://localhost:" + req + "/installaddon")
@@ -324,6 +324,35 @@
                 font-weight: 600;
                         ">
                 Backgrounds
+            </div>
+            <div class="h-8"></div>
+            <div class="card flex flex-row items-center justify-center">
+                <FluentButton @onclick="@(async() => {
+                    var req = App.Instance.controlPort;
+
+                    var res = new UriBuilder(
+                        new Uri("http://127.0.0.1:" + req + "/simplebackground")
+                    );
+                    var result = await client.PostAsync(res.Uri, null);
+
+                })">
+                    <FluentIcon Value="@(new Icons.Regular.Size20.Add())" Slot="start" Color="Color.Neutral"></FluentIcon>
+                    Set Simple Background
+                </FluentButton>
+                <div class="w-4"></div>
+                <FluentButton @onclick="@(async() => {
+                    var req = App.Instance.controlPort;
+
+                    var res = new UriBuilder(
+                        new Uri("http://127.0.0.1:" + req + "/simplebackground?delete=true")
+                    );
+                    var result = await client.GetAsync(res.Uri);
+
+                })">
+                    <FluentIcon Value="@(new Icons.Regular.Size20.Delete())" Slot="start" Color="Color.Neutral"></FluentIcon>
+                    Remove Simple Background
+                </FluentButton>
+
             </div>
             <div class="h-8"></div>
             <div style="

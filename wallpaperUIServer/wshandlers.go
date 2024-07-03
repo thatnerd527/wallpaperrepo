@@ -166,7 +166,6 @@ func shutdownHub(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-
 func storageHub(w http.ResponseWriter, r *http.Request) {
 	c, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {

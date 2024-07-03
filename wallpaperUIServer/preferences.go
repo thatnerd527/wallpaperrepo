@@ -82,6 +82,7 @@ func preferencesSystem(w http.ResponseWriter, r *http.Request) {
 			fmt.Println("Waiting for message")
 			msg := preferenceschannel.WaitForMessage()
 			fmt.Println("Sending message: ", msg)
+			fmt.Println("PREFUPDATE")
 			if msg.Stop && msg.ClientID == clientid {
 				break
 			}

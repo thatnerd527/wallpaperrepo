@@ -1,11 +1,15 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
+	"net/http"
 	"net/url"
 	"os"
 	"path/filepath"
+
+	"github.com/sqweek/dialog"
 )
 var guidtofilepath = make(map[string]string)
 
@@ -19,6 +23,42 @@ func FileNameToMediaType(filename string) string {
 		return "Audio"
 	default:
 		return "unknown"
+	}
+}
+
+func simpleBackgroundHandler(w http.ResponseWriter, r *http.Request) {
+
+	if (r.Method == "GET") {
+		if r.URL.Query().Get("delete") == "true" {
+			delete(cachedpreferences, "simplebackground")
+			preferenceschannel.SendMessage(PreferenceUpdate{cachedpreferences, GenerateGUID(), false})
+			w.Header().Add("Access-Control-Allow-Origin", "*")
+			return
+		}
+		if val, ok := cachedpreferences["simplebackground"]; ok {
+			w.Header().Set("Content-Type", "application/octet-stream")
+			http.ServeFile(w, r, val.(string))
+		} else {
+			w.WriteHeader(http.StatusNotFound)
+		}
+		w.Header().Add("Access-Control-Allow-Origin", "*")
+	} else if (r.Method == "POST") {
+		w.Header().Add("Access-Control-Allow-Origin", "*")
+		zipPath2, err := dialog.File().Title("Select simple background file").
+		Filter("Image files", "jpg", "jpeg", "png", "avif", "webp", "gif").
+		Filter("WebM encoded with AV1, VP8, or VP9", "webm").Load()
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		cachedpreferences["simplebackground"] = zipPath2
+		message, err := json.Marshal(cachedpreferences)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		os.WriteFile("preferences.json", message, 0644)
+		preferenceschannel.SendMessage(PreferenceUpdate{cachedpreferences, GenerateGUID(), false})
 	}
 }
 
