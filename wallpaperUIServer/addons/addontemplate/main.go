@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
+	"os"
 	"path"
 	"time"
 
@@ -54,12 +55,18 @@ func ipcHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func shutdown(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("Shutting down")
+	os.Exit(0)
+}
+
 func main() {
 	port := flag.Int("port", 8080, "Port to listen on")
 	flag.Parse()
 	http.HandleFunc("/", fileHandler)
 	http.HandleFunc("/keepalive", keepAlive)
 	http.HandleFunc("/ipc", ipcHandler)
+	http.HandleFunc("/shutdown", shutdown)
 	fmt.Printf("Listening on port %d\n", *port)
 	err := http.ListenAndServe(fmt.Sprintf("127.0.0.1:%d",*port), nil)
 	if err != nil {

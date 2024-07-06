@@ -1,0 +1,148 @@
+﻿<div style="
+                font-size: 26px;
+                font-weight: 600;
+                        ">
+    Panels
+</div>
+<div class="h-8"></div>
+<div style="
+                font-size: 20px;
+                font-weight: 500;
+                            ">
+    Available Panels
+</div>
+<div class="h-4"></div>
+<FluentAccordion>
+
+    @foreach (var item in Home.availablePanels)
+    {
+        <FluentAccordionItem Heading="@(item.PanelTitle + " (" + item.LoaderPanelID + ")")" Style="
+                        padding: 10px;
+                                        ">
+            <FluentIcon Value="@(new Icons.Regular.Size24.Window())" Color="@Color.Neutral" Slot="start" />
+
+            <div>Panel Type: @item.PanelType</div>
+            <div>Panel ID: @item.LoaderPanelID</div>
+
+            <div>Panel Control Port (websocket): @item.ControlPort</div>
+
+            <div class="h-7"></div>
+
+            <div>Added by: @item.ClientID</div>
+            <div class="h-4"></div>
+            <div class="card flex flex-row items-center" style="padding-left: 16px; overflow: overlay;">
+                <FluentButton Appearance="Appearance.Neutral" @onclick="() => {
+                                Home.Instance.AddPanel(item.LoaderPanelID);
+
+                            }">
+                    <FluentIcon Value="@(new Icons.Regular.Size16.AddCircle())" Slot="start" Color="Color.Success"></FluentIcon>
+                    Add Panel
+                </FluentButton>
+
+            </div>
+        </FluentAccordionItem>
+    }
+
+</FluentAccordion>
+<div class="h-8"></div>
+<div style="
+                font-size: 20px;
+                font-weight: 500;
+                                ">
+    Active Panels
+</div>
+<div class="h-4"></div>
+<FluentAccordion>
+
+    @foreach (var item in Home.panels)
+    {
+        bool openthreedots = false;
+        string itemid = item.PersistentPanelID;
+
+        <FluentAccordionItem Heading="@(item.PanelTitle + " (" + item.LoaderPanelID + ")")" Style="
+                        padding: 10px;
+                                                ">
+            <FluentIcon Value="@(new Icons.Regular.Size24.Window())" Color="@Color.Neutral" Slot="start" />
+            <div slot="end">
+                <FluentButton IconEnd="@(new Icons.Regular.Size16.MoreHorizontal())" Id="@itemid"
+                              Title="Other settings"
+                              OnClick="@(() => {
+                                                menuOpen[itemid] = true;
+                                          })" />
+            </div>
+            <div>Panel Title: @openthreedots</div>
+            <div>Panel Type: @item.PanelType</div>
+            <div>Panel ID: @item.LoaderPanelID</div>
+            <div>Persistent Panel ID: @item.PersistentPanelID</div>
+
+            <div>Panel Control Port (websocket): @item.ControlPort</div>
+
+            <div class="h-7"></div>
+
+            <div>Added by: @item.ClientID</div>
+
+            <div class="h-7"></div>
+
+            <div>Panel Position: @item.PersistentPanelX, @item.PersistentPanelY</div>
+            <div>Panel Size: @item.PersistentPanelWidth, @item.PersistentPanelHeight</div>
+
+            <div class="h-7"></div>
+            <div class="flex flex-row" style="overflow: overlay">
+                <div style="width: max-content">Panel Persistent Data: @item.PersistentPanelData</div>
+            </div>
+            <div class="h-4"></div>
+            <div class="card flex flex-row items-center" style="padding-left: 16px; overflow: overlay;">
+                <div style="min-width: max-content" class="flex flex-row">
+                    <FluentButton Appearance="Appearance.Stealth" @onclick="() => {
+                                item.PersistentPanelData = Home.availableTemplatePanels.FirstOrDefault(x => x.LoaderPanelID == item.LoaderPanelID)!.PanelDefaultData;
+                                Home.Instance.UpdatePanelData();
+                                App.SavePanelData(Home.panels);
+                            }">
+                        <FluentIcon Value="@(new Icons.Regular.Size20.ArrowReset())" Slot="start" Color="Color.Neutral"></FluentIcon>
+                        Reset Panel Data
+                    </FluentButton>
+                    <div class="w-4"></div>
+                    <FluentButton Appearance="Appearance.Neutral" @onclick="() => {
+                                item.PersistentPanelX = item.PanelRecommendedX;
+                                item.PersistentPanelY = item.PanelRecommendedY;
+                                item.PersistentPanelWidth = item.PanelRecommendedWidth;
+                                item.PersistentPanelHeight = item.PanelRecommendedHeight;
+                                Home.Instance.UpdatePanelData();
+                                App.SavePanelData(Home.panels);
+                            }">
+                        <FluentIcon Value="@(new Icons.Regular.Size20.ArrowReset())" Slot="start" Color="Color.Neutral"></FluentIcon>
+                        Reset Panel Position
+                    </FluentButton>
+                    <div class="w-4"></div>
+                    <FluentButton BackgroundColor="rgb(200,50,50)" @onclick="() => {
+                                Home.panels.Remove(item);
+                                Home.Instance.UpdatePanelData();
+                                App.SavePanelData(Home.panels);
+                            }">
+                        <FluentIcon Value="@(new Icons.Regular.Size16.Dismiss())" Slot="start" Color="Color.Neutral"></FluentIcon>
+                        Remove Panel
+                    </FluentButton>
+                </div>
+
+            </div>
+            
+        </FluentAccordionItem>
+
+    }
+
+</FluentAccordion>
+
+@code {
+    public static Panels Instance = null;
+    private Dictionary<string, Boolean> menuOpen = new Dictionary<string, Boolean>();
+
+    protected override void OnInitialized()
+    {
+        Instance = this;
+    }
+
+    public void Refresh()
+    {
+        StateHasChanged();
+    }
+}

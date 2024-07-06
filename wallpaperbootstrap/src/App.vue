@@ -7,6 +7,7 @@ import '@material/web/progress/linear-progress.js';
 import { ref } from 'vue';
 const loaded = ref(false);
 const receivedReady = ref(false);
+const quit = ref(false);
 const src = ref("")
 const embedKey = "<EMBEDKEY.THIS WILL BE REPLACED DURING INSTALLATION>";
 
@@ -14,10 +15,19 @@ window.addEventListener("message", (event) => {
   if (event.data == "ready") {
 
     receivedReady.value = true;
+    quit.value = false;
   }
   if (event.data == "reload") {
+    receivedReady.value = false;
     (document.getElementById("mainframe") as HTMLIFrameElement).src += "";
     src.value = urlGenerator();
+  }
+  if (event.data == "quit") {
+    quit.value = true;
+    receivedReady.value = false;
+    loaded.value = false;
+    console.log("quit")
+    tryConnect();
   }
 });
 
@@ -26,6 +36,7 @@ function tryConnect() {
     if (req2.status == 200) {
       loaded.value = true;
       src.value = urlGenerator();
+      (document.getElementById("mainframe") as HTMLIFrameElement).src += "";
     } else {
       setTimeout(tryConnect, 1000);
     }
@@ -56,11 +67,16 @@ tryConnect()
       height: 80px;
 
     ">
-      <div class="font-bold">Loading wallpaper..</div>
+      <div class="font-bold">Waiting for system...</div>
       <div class="mt-4">
 
       </div>
       <md-linear-progress indeterminate></md-linear-progress>
+    </div>
+  </div>
+  <div class="absolute top-0 left-0 w-full h-full flex flex-col items-center justify-center" v-show="quit">
+    <div class="w-25 h-25 card p-8 text-white m-9">
+      You have pressed the quit button in the application. To start the application again, start it from the start menu.
     </div>
   </div>
 </template>

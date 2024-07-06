@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"log"
@@ -42,6 +43,67 @@ func FindUnusedPort() int {
 	}
 	defer l.Close()
 	return l.Addr().(*net.TCPAddr).Port
+}
+
+func applyAddonChanges(w http.ResponseWriter, r *http.Request) {
+
+	changes := make(map[string]string)
+	err := json.NewDecoder(bytes.NewReader([]byte(r.URL.Query().Get("changes")))).Decode(&changes)
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	if err != nil {
+		log.Println(err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	if err != nil {
+		log.Println(err)
+		w.WriteHeader(http.StatusBadRequest)
+		return
+	}
+	for _, addon := range RuntimeAddons {
+		addon.Shutdown()
+	}
+
+	alladdons, allpaths, err := GetManifestsAndPaths()
+	if err != nil {
+		log.Println(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	for addonid,change := range changes {
+		addonpath := allpaths[pie.FindFirstUsing(alladdons, func(am AddonManifest) bool { return am.ClientID == addonid })]
+		switch change {
+			case "Uninstall":
+				// Remove the addon folder
+				err := os.RemoveAll(addonpath)
+				if err != nil {
+					log.Println(err)
+					w.WriteHeader(http.StatusInternalServerError)
+					return
+				}
+			case "Disable":
+				// Disable the addon
+
+
+				err := os.WriteFile(path.Join(addonpath,"disabled"), []byte("disabled"), os.ModePerm)
+				if err != nil {
+					log.Println(err)
+					w.WriteHeader(http.StatusInternalServerError)
+					return
+				}
+			case "Enable":
+				// Enable the addon
+
+				path3 := allpaths[pie.FindFirstUsing(alladdons, func(am AddonManifest) bool { return am.ClientID == addonid })]
+				err := os.Remove(path.Join(path3,"disabled"))
+				if err != nil {
+					log.Println(err)
+					w.WriteHeader(http.StatusInternalServerError)
+					return
+				}
+			}
+	}
 }
 
 func StartContinousHealthMonitor(RuntimeAddon *RuntimeAddon, handlecrash func()) {
@@ -263,13 +325,30 @@ func DeletedPanels(lastActivePanels []RuntimeCustomPanel, availablePanels []Temp
 	return deletedPanels
 }
 
-func getAddons(w http.ResponseWriter, r *http.Request) {
+func getActiveAddons(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	addons := []AddonManifest{}
 	for _, addon := range RuntimeAddons {
 		addons = append(addons, addon.GetAddonManifest())
 	}
 	json.NewEncoder(w).Encode(addons)
+}
+
+func getDisabledAddons(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	addons, allpaths , err := GetManifestsAndPaths()
+	if err != nil {
+		log.Println(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	disabledaddons := []AddonManifest{}
+	for _, addon := range addons {
+		if _, err := os.Stat(path.Join(allpaths[pie.FindFirstUsing(addons, func(am AddonManifest) bool { return am.ClientID == addon.ClientID })],"disabled")); err == nil {
+			disabledaddons = append(disabledaddons, addon)
+		}
+	}
+	json.NewEncoder(w).Encode(disabledaddons)
 }
 
 func getAddonOrigin(w http.ResponseWriter, r *http.Request) {

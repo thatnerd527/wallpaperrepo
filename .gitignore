@@ -39,3 +39,5 @@ wallpaperInstaller/wallpaperInstaller.zip
 wallpaperInstaller/install.zip
 wallpaperUIServer/preferences.json
 /packaged
+wallpaperUIServer/.pid
+wallpaperUIServer/addons/addontemplate/disabled

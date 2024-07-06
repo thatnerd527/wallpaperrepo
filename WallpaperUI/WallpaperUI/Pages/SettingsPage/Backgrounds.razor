@@ -1,0 +1,141 @@
+﻿<div style="
+                font-size: 26px;
+                font-weight: 600;
+                        ">
+    Backgrounds
+</div>
+<div class="h-8"></div>
+<div class="card flex flex-row items-center justify-center">
+    <FluentButton @onclick="@(async() => {
+                    var req = App.Instance.controlPort;
+
+                    var res = new UriBuilder(
+                        new Uri("http://127.0.0.1:" + req + "/simplebackground")
+                    );
+                    var result = await client.PostAsync(res.Uri, null);
+
+                })">
+        <FluentIcon Value="@(new Icons.Regular.Size20.Add())" Slot="start" Color="Color.Neutral"></FluentIcon>
+        Set Simple Background
+    </FluentButton>
+    <div class="w-4"></div>
+    <FluentButton @onclick="@(async() => {
+                    var req = App.Instance.controlPort;
+
+                    var res = new UriBuilder(
+                        new Uri("http://127.0.0.1:" + req + "/simplebackground?delete=true")
+                    );
+                    var result = await client.GetAsync(res.Uri);
+
+                })">
+        <FluentIcon Value="@(new Icons.Regular.Size20.Delete())" Slot="start" Color="Color.Neutral"></FluentIcon>
+        Remove Simple Background
+    </FluentButton>
+
+</div>
+<div class="h-8"></div>
+<div style="
+                font-size: 20px;
+                font-weight: 500;
+                                ">
+    Active Background
+</div>
+<div class="h-4"></div>
+<div>Persistent ID: @Home.currentBackground</div>
+<div class="h-8"></div>
+<div style="
+                font-size: 20px;
+                font-weight: 500;
+                            ">
+    Available Backgrounds
+</div>
+<div class="h-4"></div>
+<FluentAccordion>
+
+    @foreach (var item in Home.availableBackgrounds)
+    {
+        <FluentAccordionItem Heading="@item.LoaderBackgroundID" Style="
+                        padding: 10px;
+                                        ">
+            <FluentIcon Value="@(new Icons.Regular.Size24.Wallpaper())" Color="@Color.Neutral" Slot="start" />
+
+            <div>Background ID: @item.LoaderBackgroundID</div>
+            <div>Background Type: @item.BackgroundType</div>
+
+            <div>Background Control Port (websocket): @item.ControlPort</div>
+
+            <div class="h-4"></div>
+            <div class="card flex flex-row items-center" style="padding-left: 16px; overflow: overlay;">
+                <div style="min-width: max-content" class="flex flex-row">
+                    <FluentButton Appearance="Appearance.Neutral" @onclick="() => {
+                                    Home.Instance.SetBackground(item.LoaderBackgroundID);
+                            }">
+                        <FluentIcon Value="@(new Icons.Regular.Size20.Checkmark())" Slot="start" Color="Color.Neutral"></FluentIcon>
+                        Set as Background
+                    </FluentButton>
+                </div>
+            </div>
+
+
+        </FluentAccordionItem>
+    }
+</FluentAccordion>
+<div class="h-8"></div>
+<div style="
+                font-size: 20px;
+                font-weight: 500;
+                                ">
+    Last active Backgrounds
+</div>
+<div class="h-4"></div>
+<FluentAccordion>
+
+    @foreach (var item in Home.backgrounds)
+    {
+        <FluentAccordionItem Heading="@item.LoaderBackgroundID" Style="
+                        padding: 10px;
+                                                ">
+            <FluentIcon Value="@(new Icons.Regular.Size24.Wallpaper())" Color="@Color.Neutral" Slot="start" />
+
+            <div>Background ID: @item.LoaderBackgroundID</div>
+            <div>Background Type: @item.BackgroundType</div>
+            <div>Persistent Background ID: @item.PersistentBackgroundID</div>
+
+            <div>Added by: @item.ClientID</div>
+            <div>Background Content: @item.BackgroundContent</div>
+            <div>Background Control Port (websocket): @item.ControlPort</div>
+            <div class="h-4"></div>
+            <div class="card flex flex-row items-center" style="padding-left: 16px; overflow: overlay;">
+                <div style="min-width: max-content" class="flex flex-row">
+                    <FluentButton Appearance="Appearance.Neutral" @onclick="() => {
+                                    Home.Instance.SetBackground(item.LoaderBackgroundID);
+                            }">
+                        <FluentIcon Value="@(new Icons.Regular.Size20.Checkmark())" Slot="start" Color="Color.Neutral"></FluentIcon>
+                        Set as Background
+                    </FluentButton>
+                </div>
+            </div>
+
+
+        </FluentAccordionItem>
+    }
+</FluentAccordion>
+
+@inject IHttpClientFactory hcf
+@inject IDialogService DialogService
+@inject IJSRuntime JS
+@code {
+    private HttpClient client = null;
+    public static Backgrounds Instance = null;
+
+    protected override void OnInitialized()
+    {
+        Instance = this;
+        client = hcf.CreateClient();
+    }
+
+    public void Refresh()
+    {
+        StateHasChanged();
+    }
+}

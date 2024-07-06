@@ -318,6 +318,28 @@ func panelSystem(w http.ResponseWriter, r *http.Request) {
 	}
 
 }
+
+func GetManifestsAndPaths() ([]AddonManifest, []string, error) {
+	addons, err := os.ReadDir(ADDONS_PATH)
+	if err != nil {
+		log.Println(err)
+		return []AddonManifest{}, []string{}, fmt.Errorf("Error reading addons directory: %v", err)
+	}
+	manifests := make([]AddonManifest, 0)
+	paths := make([]string, 0)
+	for i := 0; i < len(addons); i++ {
+		addon := addons[i]
+		manifest, err := LoadManifest(ADDONS_PATH + "/" + addon.Name() + "/manifest.json")
+		if err != nil {
+			log.Println(err)
+			return []AddonManifest{}, []string{}, fmt.Errorf("Error loading manifest for addon %s: %v", addon.Name(), err)
+		}
+		manifests = append(manifests, manifest)
+		paths = append(paths, ADDONS_PATH+"/"+addon.Name())
+	}
+	return manifests, paths, nil
+}
+
 func LoadAllPanelsFromAddons() (ResultResponse, error) {
 	if _, err := os.Stat("addons"); err != nil {
 		os.Mkdir("addons", 0755)
@@ -346,6 +368,10 @@ func LoadAllPanelsFromAddons() (ResultResponse, error) {
 	}
 	for i := 0; i < len(addons); i++ {
 		addon := addons[i]
+		if _, err := os.Stat(ADDONS_PATH + "/" + addon.Name() + "/disabled"); err == nil {
+				fmt.Println("Addon " + addon.Name() + " is disabled")
+				continue
+			}
 		manifest, err := LoadManifest(ADDONS_PATH + "/" + addon.Name() + "/manifest.json")
 
 		if err != nil {

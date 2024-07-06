@@ -160,6 +160,7 @@ func startBackgroundProcess(command string, args []string, cwd string) {
     // Note: We do not wait for the process to finish.
 }
 
+
 func postSetup(folder string) {
 	embedkey := GenerateGUID()
 	installerembed := path.Join(folder, "embedkey")
@@ -168,6 +169,7 @@ func postSetup(folder string) {
 				log.Fatal(err)
 			}
 	userstartupfolder := path.Join(ufolder, "AppData", "Roaming", "Microsoft", "Windows", "Start Menu", "Programs", "Startup")
+	startmenu := path.Join(ufolder, "AppData", "Roaming", "Microsoft", "Windows", "Start Menu", "Programs")
 	err = os.WriteFile(installerembed, []byte(embedkey), 0644)
 	if err != nil {
 		log.Fatal(err)
@@ -188,8 +190,19 @@ func postSetup(folder string) {
 		log.Fatal(err)
 	}
 	startBackgroundProcess(path.Join(folder, "wallpaperuiserver.exe"), []string{}, folder)
+	resolved, err := filepath.Abs(path.Join(folder, "bootstrap"))
+	if err != nil {
+		log.Fatal(err)
+	}
+	startBackgroundProcess("C:/Windows/explorer.exe", []string{resolved}, folder)
 
+	// Create start menu shortcuts
 
+	os.MkdirAll(path.Join(startmenu, "Wallpaper System"), 0755)
+	err = createShortcut(path.Join(startmenu, "Wallpaper System", "Wallpaper System.lnk"), path.Join(folder, "wallpaperuiserver.exe"), folder)
+	if err != nil {
+		log.Fatal(err)
+	}
 }
 
 func main() {

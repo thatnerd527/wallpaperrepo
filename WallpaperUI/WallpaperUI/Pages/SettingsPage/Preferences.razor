@@ -1,0 +1,82 @@
+﻿<div style="
+                font-size: 26px;
+                font-weight: 600;
+                        ">
+    Settings
+</div>
+<div class="h-8"></div>
+<div style="
+                font-size: 20px;
+                font-weight: 500;
+                            ">
+    General
+</div>
+<div class="h-4"></div>
+<div class="card flex flex-row items-center" style="padding-left: 16px; overflow: overlay;">
+    <FluentButton Appearance="Appearance.Neutral" @onclick="@(() => {
+                    JS.InvokeVoidAsync("remoterestart");
+
+                })">
+        <FluentIcon Value="@(new Icons.Regular.Size20.ArrowCounterclockwise())" Slot="start" Color="Color.Neutral"></FluentIcon>
+        Restart Application
+    </FluentButton>
+    <div class="w-4"></div>
+    <FluentButton Appearance="Appearance.Neutral" @onclick="@(() => {
+                    JS.InvokeVoidAsync("remoteexit");
+
+                })">
+        <FluentIcon Value="@(new Icons.Regular.Size20.Dismiss())" Slot="start" Color="Color.Neutral"></FluentIcon>
+        Quit Application
+    </FluentButton>
+    <div class="w-4"></div>
+    <FluentButton Appearance="Appearance.Neutral" @onclick="() => {
+                    App.Instance.preferencesManager.Clear();
+                }">
+        <FluentIcon Value="@(new Icons.Regular.Size20.ArrowReset())" Slot="start" Color="Color.Neutral"></FluentIcon>
+        Reset Settings
+    </FluentButton>
+</div>
+<div class="h-4"></div>
+<div class="flex min-h-12 w-full p-4" style="border-radius: 12px; background-color: rgba(255,255,255,0.05)">
+    <div class="w-full">
+        Enable Auto start on user login
+    </div>
+    <div class="flex w-full flex-row justify-end">
+        <FluentSwitch ValueChanged="@(async (v) => {
+            var res = new UriBuilder(
+                        new Uri($"http://127.0.0.1:{App.Instance.controlPort}/autostart")
+                    );
+            res.Query = v ? "?enable=true" : "";
+            var request = await client.PostAsync(res.Uri, null);
+            await GetStatus();
+
+        })" Value="autoStart"></FluentSwitch>
+    </div>
+</div>
+@inject IHttpClientFactory hcf
+@inject IJSRuntime JS
+@code {
+    private HttpClient client;
+
+    private bool autoStart = false;
+
+    public static Preferences Instance = null;
+
+    private async Task GetStatus()
+    {
+        var res = new UriBuilder(
+                new Uri($"http://127.0.0.1:{App.Instance.controlPort}/autostart")
+            );
+        var request = await client.GetAsync(res.Uri);
+        autoStart = await request.Content.ReadAsStringAsync() == "true";
+        StateHasChanged();
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        Instance = this;
+        client = hcf.CreateClient();
+        await GetStatus();
+        
+    }
+}

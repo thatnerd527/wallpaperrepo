@@ -9,6 +9,7 @@ import (
 	"path"
 	"path/filepath"
 	"strconv"
+	"time"
 
 	"github.com/getlantern/systray"
 	"github.com/google/uuid"
@@ -60,6 +61,25 @@ func startPopupApp() {
 
 
 func main() {
+	if _, err := os.Stat(".pid"); err == nil {
+		data, err := os.ReadFile(".pid")
+		if err != nil {
+			log.Println(err)
+		}
+		pid, err := strconv.Atoi(string(data))
+		if err != nil {
+			log.Println(err)
+		}
+		_, err = os.FindProcess(pid)
+		if err == nil {
+			fmt.Println("Already running")
+			os.Exit(0)
+			return
+		} else {
+			fmt.Println("Previous instance may have crashed, resetting pid file")
+		}
+	}
+	os.WriteFile(".pid", []byte(fmt.Sprint(os.Getpid())), 0644)
 	if _, err := os.Stat("embedkey"); os.IsNotExist(err) {
 		os.WriteFile("embedkey", []byte(embedKey), 0644)
 	} else {
@@ -83,14 +103,18 @@ func main() {
 	secureMux.HandleFunc("/popuprequest",popupRequest)
 	secureMux.HandleFunc("/panelsystem", panelSystem)
 	secureMux.HandleFunc("/backgroundsystem", backgroundSystem)
-	secureMux.HandleFunc("/addons",getAddons)
+	secureMux.HandleFunc("/addons",getActiveAddons)
+	secureMux.HandleFunc("/disabledaddons", getDisabledAddons)
 	secureMux.HandleFunc("/getaddonorigin",getAddonOrigin)
 	secureMux.HandleFunc("/mediaregistry",mediaRegistry)
 	secureMux.HandleFunc("/preferences",preferencesSystem)
 	secureMux.HandleFunc("/restart",restartHandler)
+	secureMux.HandleFunc("/shutdown",shutdownHandler)
 	secureMux.HandleFunc("/restartipc",restartIPC)
 	secureMux.HandleFunc("/installaddon",installAddon)
 	secureMux.HandleFunc("/simplebackground",simpleBackgroundHandler)
+	secureMux.HandleFunc("/autostart",autoStartHandler)
+	secureMux.HandleFunc("/addonchanges",applyAddonChanges)
 
 	defaultMux := http.NewServeMux()
 	defaultMux.HandleFunc("/", fileHandler)
@@ -120,8 +144,39 @@ func main() {
 		systray.Run(createTray, func() {})
 	}()
 	http.ListenAndServe(fmt.Sprintf("127.0.0.1:%v",unused), secureMux)
+	shutdown()
+}
 
+func shutdownHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	shutdown()
+	w.WriteHeader(http.StatusOK)
+	w.Write([]byte("Shutting down"))
+}
 
+func actuallyExitFr() {
+	go func() {
+		os.Exit(0)
+	}()
+
+}
+
+func shutdown() {
+	popupchannel <- PopupRequest{Type: "stop"}
+	restarthub.SendMessage(RestartRequest{
+		Stop: false,
+		ClientID: uuid.NewString(),
+		Message2: "exit",
+	})
+	if popupprocess != nil {
+		popupprocess.Kill()
+	}
+	for _, addon := range RuntimeAddons {
+		addon.Shutdown()
+	}
+	os.Remove(".pid")
+	time.Sleep(5 * time.Second)
+	actuallyExitFr()
 
 }
 

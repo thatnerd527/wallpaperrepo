@@ -38,6 +38,24 @@
         <FluentProgress></FluentProgress>
     </div>
 </div>
+<div class="card absolute right-0 top-0 m-4 flex-col items-center justify-center" style="
+            z-index: 2;
+            padding: 24px;
+            display: @((exitInProgress) ? "flex" : "none");
+            width: 256px;
+">
+    <div class="flex h-full w-full flex-row">
+        <FluentIcon Value="@(new Icons.Regular.Size24.Dismiss())">
+
+        </FluentIcon>
+        <div class="w-4"></div>
+        Exit in progress.
+    </div>
+    <div class="h-4"></div>
+    <div class="w-full">
+        <FluentProgress></FluentProgress>
+    </div>
+</div>
 
 @if (mode == "wallpaper")
 {
@@ -123,6 +141,7 @@ left: 0px;
         min-width: 16px;
         margin-bottom: 64px;
         padding: 8px;
+        display: none;
     " class="card">
         <FluentButton IconEnd="@(new Icons.Regular.Size16.Settings())"
                       Title="Settings" 
@@ -161,10 +180,12 @@ left: 0px;
     public static List<RuntimeCustomBackground> deletedBackground = new();
 
     public static List<AddonManifest> addonManifests = new();
+    public static List<AddonManifest> disabledAddons = new();
 
     public static string currentBackground = null;
     public static bool connectionStatus = true;
     public static bool restartInProgress = false;
+    public static bool exitInProgress = false;
 
     public static Home Instance = null;
     private bool loading = true;
@@ -213,6 +234,13 @@ left: 0px;
     public static void SetRestart()
     {
         restartInProgress = true;
+        Instance.StateHasChanged();
+    }
+
+    [JSInvokable]
+    public static void SetExit()
+    {
+        exitInProgress = true;
         Instance.StateHasChanged();
     }
 

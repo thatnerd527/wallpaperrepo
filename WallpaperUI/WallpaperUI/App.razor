@@ -107,10 +107,31 @@
         JsonElement result = JsonSerializer.Deserialize<JsonElement>(data)!;
         var lastActiveAddons = result.EnumerateArray().Select(x =>
     {
-    return AddonManifest.FromJsonElement(x);
+        return AddonManifest.FromJsonElement(x);
     });
         Home.addonManifests = lastActiveAddons.ToList();
         Home.Instance.UpdatePanelData();
+        if (Addons.Instance != null)
+        {
+            Addons.Instance.Refresh();
+        }
+
+    }
+
+    [JSInvokable]
+    public static void UpdateDisabledAddonData(string data)
+    {
+        JsonElement result = JsonSerializer.Deserialize<JsonElement>(data)!;
+        var disabledAddons = result.EnumerateArray().Select(x =>
+        {
+            return AddonManifest.FromJsonElement(x);
+        });
+        Home.disabledAddons = disabledAddons.ToList();
+        Home.Instance.UpdatePanelData();
+        if (Addons.Instance != null)
+        {
+            Addons.Instance.Refresh();
+        }
 
     }
 
@@ -128,6 +149,10 @@
     });
         Home.panels = lastActivePanels.ToList();
         Home.Instance.UpdatePanelData();
+        if (Panels.Instance != null)
+        {
+            Panels.Instance.Refresh();
+        }
     }
 
     [JSInvokable]
@@ -152,6 +177,10 @@
         Home.currentBackground = result.GetProperty("NewActiveBackground").GetString()!;
 
         Home.Instance.UpdatePanelData();
+        if (Backgrounds.Instance != null)
+        {
+            Backgrounds.Instance.Refresh();
+        }
     }
 
 
@@ -181,6 +210,10 @@
     });
         Home.SetData(availablePanels.ToList(), availableTemplatePanels.ToList(), lastActivePanels.ToList(), deletedPanels.ToList());
         var embeddedpanels = availablePanels.Where(x => x.PanelType == "Embedded").ToList();
+        if (Panels.Instance != null)
+        {
+            Panels.Instance.Refresh();
+        }
     }
 
     [JSInvokable]
@@ -206,6 +239,10 @@
         var currentBackground = result.GetProperty("LastActiveBackgroundID").GetString()!;
         Home.SetBackgroundData(availableBackgrounds.ToList(), availableTemplateBackgrounds.ToList(), lastActiveBackgrounds.ToList(), deletedBackgrounds.ToList(), currentBackground);
         var embeddedBackgrounds = availableBackgrounds.Where(x => x.BackgroundType == "Embedded").ToList();
+        if (Backgrounds.Instance != null)
+        {
+            Backgrounds.Instance.Refresh();
+        }
     }
 
     [JSInvokable]

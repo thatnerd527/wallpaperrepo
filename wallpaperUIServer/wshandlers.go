@@ -18,6 +18,7 @@ type ShutdownRequest struct {
 
 type RestartRequest struct {
 	Stop bool
+	Message2 string
 	ClientID string
 }
 
@@ -46,7 +47,7 @@ func restartIPC(w http.ResponseWriter, r *http.Request) {
 			if msg.Stop {
 				continue;
 			}
-			err := c.WriteMessage(websocket.TextMessage, []byte("restart"))
+			err := c.WriteMessage(websocket.TextMessage, []byte(msg.Message2))
 			if err != nil {
 				log.Println("write:", err)
 				return
@@ -54,13 +55,13 @@ func restartIPC(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 	for {
-		_, _, err := c.ReadMessage()
+		_, p, err := c.ReadMessage()
 		if err != nil {
 			log.Println("read 2:", err)
-			restarthub.SendMessage(RestartRequest{true, clientid})
+			restarthub.SendMessage(RestartRequest{true, string(p),clientid})
 			break
 		}
-		restarthub.SendMessage(RestartRequest{false, clientid})
+		restarthub.SendMessage(RestartRequest{false, string(p), clientid})
 	}
 
 }

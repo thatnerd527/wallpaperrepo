@@ -1,0 +1,320 @@
+﻿<div style="
+                font-size: 26px;
+                font-weight: 600;
+                            ">
+    Addons
+</div>
+<div class="h-8"></div>
+<div class="card flex flex-row items-center justify-center p-4">
+    <FluentButton @onclick="@(async () => {
+                    var req = App.Instance.controlPort;
+                    var res = new UriBuilder(
+                        new Uri("http://localhost:" + req + "/installaddon")
+                    );
+                    res.Query = "?installmode=zip";
+                    var result = await client.GetAsync(res.Uri);
+                    if (result.IsSuccessStatusCode)
+                    {
+                        await OpenDialogAsync("Installation successful, application will now restart. ");
+                        await JS.InvokeVoidAsync("remoterestart");
+                    }
+                    else
+                    {
+                        await OpenDialogAsync("Installation failed");
+                    }
+                    await JS.InvokeVoidAsync("refreshaddons");
+                })">
+        <FluentIcon Value="@(new Icons.Regular.Size20.ArrowDownload())" Slot="start" Color="Color.Neutral"></FluentIcon>
+        Install addon (.zip)
+    </FluentButton>
+    <div class="w-4"></div>
+    <FluentButton @onclick="@(async() => {
+                    var req = App.Instance.controlPort;
+
+                    var res = new UriBuilder(
+                        new Uri("http://localhost:" + req + "/installaddon")
+                    );
+                    res.Query = "?installmode=folder";
+                    var result = await client.GetAsync(res.Uri);
+                    if (result.IsSuccessStatusCode)
+                    {
+                        await OpenDialogAsync("Installation successful, application will now restart. ");
+                        await JS.InvokeVoidAsync("remoterestart");
+                    }
+                    else
+                    {
+                        await OpenDialogAsync("Installation failed, " + await result.Content.ReadAsStringAsync());
+                    }
+                    await JS.InvokeVoidAsync("refreshaddons");
+                })">
+        <FluentIcon Value="@(new Icons.Regular.Size20.ArrowDownload())" Slot="start" Color="Color.Neutral"></FluentIcon>
+        Install addon (folder)
+    </FluentButton>
+</div>
+<div class="h-8"></div>
+
+<div style="
+                font-size: 20px;
+                font-weight: 500;
+                                ">
+    Running Addons
+</div>
+<div class="h-4"></div>
+<FluentAccordion>
+
+    @foreach (var item in Home.addonManifests)
+    {
+        string itemid = item.ClientID;
+        <FluentAccordionItem Heading="@(item.Name + " (" + item.ClientID + ")")" Style="
+                        padding: 10px;
+                                                    ">
+            <FluentIcon Value="@(new Icons.Regular.Size24.PuzzlePiece())" Color="@Color.Neutral" Slot="start" />
+            <div slot="end">
+                <FluentButton IconEnd="@(new Icons.Regular.Size16.MoreHorizontal())" Id="@itemid"
+                              Title="Other settings"
+                              OnClick="@(() => {
+                                                menuOpen[itemid] = true;
+                                          })" />
+            </div>
+            <div>Author: @item.Author</div>
+            <div>Version: @item.Version</div>
+            <div>Client ID: @item.ClientID</div>
+            <div>Description: @item.Description</div>
+            <div>Bootstrap executable: @item.BootstrapExecutable</div>
+
+            <div>Auto restart enabled: @item.EnableRestart</div>
+            <FluentMenu Anchor="@itemid" Open="@(menuOpen.ContainsKey(itemid) ? menuOpen[itemid] : false)" @onmenuchange="@((MenuChangeEventArgs e) => {
+                           menuOpen[itemid] = false;
+                           Console.WriteLine("Menu closed");
+                           switch (e.Value) {
+                                case "Disable":
+                                pendingChanges[itemid] = ChangeType.Disable;
+                                        break;
+                                case "Uninstall":
+                                pendingChanges[itemid] = ChangeType.Uninstall;
+                                        break;
+
+                           }
+                        })" VerticalThreshold="170">
+                <FluentMenuItem>
+                    <span slot="start"><FluentIcon Value="@(new Icons.Regular.Size20.Pause())" Color="Color.Neutral" Slot="start" /></span>
+                    Disable
+                </FluentMenuItem>
+                <FluentMenuItem>
+                    <span slot="start"><FluentIcon Value="@(new Icons.Regular.Size20.UninstallApp())" Color="Color.Neutral" Slot="start" /></span>
+                    Uninstall
+                </FluentMenuItem>
+            </FluentMenu>
+        </FluentAccordionItem>
+    }
+
+</FluentAccordion>
+
+<div class="h-4"></div>
+<div style="
+                font-size: 20px;
+                font-weight: 500;
+                                ">
+    Disabled Addons
+</div>
+<div class="h-4"></div>
+<FluentAccordion>
+
+    @foreach (var item in Home.disabledAddons)
+    {
+        string itemid = item.ClientID;
+        <FluentAccordionItem Heading="@(item.Name + " (" + item.ClientID + ")")" Style="
+                        padding: 10px;
+                                                        ">
+            <FluentIcon Value="@(new Icons.Regular.Size24.PuzzlePiece())" Color="@Color.Neutral" Slot="start" />
+            <div slot="end">
+                <FluentButton IconEnd="@(new Icons.Regular.Size16.MoreHorizontal())" Id="@itemid"
+                              Title="Other settings"
+                              OnClick="@(() => {
+                                                menuOpen[itemid] = true;
+                                          })" />
+            </div>
+            <div>Author: @item.Author</div>
+            <div>Version: @item.Version</div>
+            <div>Client ID: @item.ClientID</div>
+            <div>Description: @item.Description</div>
+            <div>Bootstrap executable: @item.BootstrapExecutable</div>
+
+            <div>Auto restart enabled: @item.EnableRestart</div>
+            <FluentMenu Anchor="@itemid" Open="@(menuOpen.ContainsKey(itemid) ? menuOpen[itemid] : false)" @onmenuchange="@((MenuChangeEventArgs e) => {
+                           menuOpen[itemid] = false;
+                           Console.WriteLine("Menu closed");
+                           switch (e.Value) {
+                               case "Enable":
+                                      pendingChanges[itemid] = ChangeType.Enable;
+                                      break;
+                                case "Uninstall":
+                                pendingChanges[itemid] = ChangeType.Uninstall;
+                                        break;
+
+                           }
+                        })" VerticalThreshold="170">
+                <FluentMenuItem>
+                    <span slot="start"><FluentIcon Value="@(new Icons.Regular.Size20.Play())" Color="Color.Neutral" Slot="start" /></span>
+                    Enable
+                </FluentMenuItem>
+                <FluentMenuItem>
+                    <span slot="start"><FluentIcon Value="@(new Icons.Regular.Size20.UninstallApp())" Color="Color.Neutral" Slot="start" /></span>
+                    Uninstall
+                </FluentMenuItem>
+            </FluentMenu>
+        </FluentAccordionItem>
+    }
+
+</FluentAccordion>
+<div class="h-4"></div>
+<div class="absolute bottom-0 left-0 flex w-full p-4" style="
+    display: @(pendingChanges.Count > 0 ? "flex" : "none");
+">
+    <div class="left-0 flex min-h-14 w-full flex-row items-center p-4" style="
+    background-color: rgba(0,0,0,0.15);
+    border-radius: 12px;
+
+">
+        <div class="w-full">You have unapplied changes</div>
+        <div class="flex w-full flex-row items-end justify-end">
+            <FluentButton Appearance="Appearance.Stealth" @onclick="@(() => {pendingChanges.Clear();})">
+                Discard changes
+            </FluentButton>
+            <div class="w-4"></div>
+            <FluentButton Appearance="Appearance.Accent" @onclick="@(() => {showConfirmDialog=true;})">
+                Apply changes
+            </FluentButton>
+        </div>
+    </div>
+</div>
+<div class="card2 absolute left-0 top-0 h-full w-full flex-col items-center justify-center"
+     style="
+        display: @(showConfirmDialog ? "flex" : "none");
+    ">
+    <div class="m-8 bg-neutral-700 p-8" style="
+        border-radius: 12px;
+    ">
+        <div style="
+                font-size: 26px;
+                font-weight: 600;
+                            ">
+            Apply changes?
+        </div>
+        <div class="h-8"></div>
+        Pressing this button will apply all of the changes that you have defined in the add-ons panel and will also restart the program immediately after completing all the changes. Are you sure you want to continue?
+        <div class="h-8"></div>
+        <div class="flex w-full flex-row items-end justify-end">
+            <FluentButton Appearance="Appearance.Stealth" @onclick="@(() => {showConfirmDialog=false;})">
+                Cancel
+            </FluentButton>
+            <div class="w-4"></div>
+            <FluentButton Appearance="Appearance.Accent" @onclick="@(async () => {
+                    await ApplyChanges();
+            })">
+                Apply changes and restart
+            </FluentButton>
+        </div>
+    </div>
+</div>
+<div class="card2 absolute left-0 top-0 h-full w-full flex-col items-center justify-center"
+     style="
+        display: @(showErrorMessage ? "flex" : "none");
+    ">
+    <div class="m-8 bg-neutral-700 p-8" style="
+        border-radius: 12px;
+    ">
+        <div style="
+                font-size: 26px;
+                font-weight: 600;
+                            ">
+            Failed.
+        </div>
+        <div class="h-8"></div>
+        <div class="flex w-full flex-row items-end justify-end">
+            <FluentButton Appearance="Appearance.Accent" @onclick="@(() => {showErrorMessage=false;})">
+                Close
+            </FluentButton>
+        </div>
+    </div>
+</div>
+
+@inject IHttpClientFactory hcf
+@inject IDialogService DialogService
+@inject IJSRuntime JS
+@using System.Text
+@using System.Text.Json
+@code {
+    private HttpClient client = null;
+
+    public static Addons Instance = null;
+
+    private Dictionary<string, Boolean> menuOpen = new Dictionary<string, Boolean>();
+
+    protected override void OnInitialized()
+    {
+        Instance = this;
+        client = hcf.CreateClient();
+    }
+
+    public void Refresh()
+    {
+        StateHasChanged();
+    }
+
+
+
+    public Dictionary<string, ChangeType> pendingChanges = new();
+
+    private bool showConfirmDialog = false;
+
+    private bool showErrorMessage = false;
+
+    private async Task OpenDialogAsync(string status)
+    {
+        DialogParameters parameters = new()
+            {
+                Title = $"Installation finished",
+                PrimaryAction = "OK",
+                PrimaryActionEnabled = true,
+                SecondaryActionEnabled = false,
+
+                Width = "500px",
+                PreventScroll = true
+            };
+        var result = await DialogService.ShowDialogAsync<Dialog>(status,parameters);
+        await result.Result;
+    }
+
+
+    private async Task ApplyChanges()
+    {
+        var jsonRep = new Dictionary<string, string>();
+        foreach (var item in pendingChanges)
+        {
+            jsonRep.Add(item.Key, Enum.GetName(typeof(ChangeType),item.Value));
+        }
+        var res = new UriBuilder(
+    new Uri($"http://127.0.0.1:{App.Instance.controlPort}/addonchanges")
+    );
+        res.Query = "?changes=" + JsonSerializer.Serialize(jsonRep);
+        var request = await client.GetAsync(res.Uri);
+        if (request.IsSuccessStatusCode)
+        {
+            await JS.InvokeVoidAsync("remoterestart");
+        }
+        else
+        {
+            showErrorMessage = true;
+        }
+    }
+
+    public enum ChangeType
+    {
+        Enable,
+        Disable,
+        Uninstall
+    }
+
+
+}

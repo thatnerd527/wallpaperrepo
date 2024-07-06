@@ -17,4 +17,4 @@ echo Step 3: Copying.
 xcopy .\wallpaperInstaller\wallpaperInstaller.exe .\packaged
 xcopy .\installsplash.bapng .\packaged
 mkdir .\packaged\tools
-xcopy .\tools .\packaged\tools /s /e /y
+xcopy .\wallpaperInstaller\tools .\packaged\tools /s /e /y

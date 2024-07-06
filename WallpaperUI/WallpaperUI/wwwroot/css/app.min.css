@@ -570,6 +570,10 @@ video {
   bottom: 0px;
 }
 
+.left-0 {
+  left: 0px;
+}
+
 .right-0 {
   right: 0px;
 }
@@ -580,6 +584,10 @@ video {
 
 .m-4 {
   margin: 1rem;
+}
+
+.m-8 {
+  margin: 2rem;
 }
 
 .mb-16 {
@@ -622,6 +630,14 @@ video {
   height: 100%;
 }
 
+.min-h-12 {
+  min-height: 3rem;
+}
+
+.min-h-14 {
+  min-height: 3.5rem;
+}
+
 .w-4 {
   width: 1rem;
 }
@@ -642,8 +658,16 @@ video {
   flex-direction: column;
 }
 
+.items-end {
+  align-items: flex-end;
+}
+
 .items-center {
   align-items: center;
+}
+
+.justify-end {
+  justify-content: flex-end;
 }
 
 .justify-center {
@@ -657,6 +681,11 @@ video {
 .bg-gray-700 {
   --tw-bg-opacity: 1;
   background-color: rgb(55 65 81 / var(--tw-bg-opacity));
+}
+
+.bg-neutral-700 {
+  --tw-bg-opacity: 1;
+  background-color: rgb(64 64 64 / var(--tw-bg-opacity));
 }
 
 .object-cover {
@@ -674,6 +703,10 @@ video {
 
 .p-4 {
   padding: 1rem;
+}
+
+.p-8 {
+  padding: 2rem;
 }
 
 .align-middle {
@@ -882,6 +915,14 @@ code {
   background-color: rgba(17, 25, 40, 0.5);
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.125);
+  min-width: 80px;
+  min-height: 80px;
+}
+
+.card2 {
+  backdrop-filter: blur(16px) saturate(180%);
+  -webkit-backdrop-filter: blur(16px) saturate(180%);
+  background-color: rgba(17, 25, 40, 0.5);
   min-width: 80px;
   min-height: 80px;
 }

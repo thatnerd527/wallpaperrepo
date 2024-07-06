@@ -40,6 +40,9 @@ function setupPanelConnection() {
             } catch (e) {
                 console.log(e);
             }
+            if (!initialConnectionPass) {
+                return
+            }
             setupPanelConnection();
         });
         panelsystem.addEventListener("message", function (event) {
@@ -87,6 +90,9 @@ function setupBackgroundConnection() {
                 backgroundsystem = null;
             } catch (e) {
                 console.log(e);
+            }
+            if (!initialConnectionPass) {
+                return
             }
             setupBackgroundConnection();
         });
@@ -136,6 +142,9 @@ function setupPreferencesConnection() {
             } catch (e) {
                 console.log(e);
             }
+            if (!initialConnectionPass) {
+                return
+            }
             setupPreferencesConnection();
         });
         preferencessystem.addEventListener("message", function (event) {
@@ -180,16 +189,22 @@ function setupRestartConnection() {
             } catch (e) {
                 console.log(e);
             }
+            if (!initialConnectionPass) {
+                return
+            }
             setupRestartConnection();
         });
         restartipc.addEventListener("message", function (event) {
             if (!connected) {
                 return;
             }
-            console.log("DECLARED MESSAGE" + event.data)
+            console.log("DECLARED MESSAGE " + event.data)
             if (event.data == "restart") {
-                console.log("DECLARED MESSAGE 2" + event.data)
+                console.log("DECLARED MESSAGE 2 " + event.data)
                 window.restart();
+            } else if (event.data == "exit") {
+                console.log("DECLARED MESSAGE 3 " + event.data)
+                window.quit();
             }
             
 
@@ -218,14 +233,35 @@ if (controlPort == null) {
     window.restart = async function () {
         let request = new URL(`http://127.0.0.1:${controlPort}/restart`)
         DotNet.invokeMethod("WallpaperUI", "SetRestart");
-        await fetch(request.toString())
+        try {
+            await fetch(request.toString())
+        } catch (e) {
+            console.log(e)
+        }
         window.top.postMessage("reload", "*")
+    }
+
+    window.quit = async function () {
+        let request = new URL(`http://127.0.0.1:${controlPort}/shutdown`)
+        DotNet.invokeMethod("WallpaperUI", "SetExit");
+        try {
+            await fetch(request.toString())
+        } catch (e) {
+            console.log(e)
+        }
+        window.top.postMessage("quit", "*")
     }
 
     window.remoterestart = function () {
         console.log("Restarting")
         window.wallpaperAPI.popupsuccess("");
         restartipc.send("restart");
+    }
+
+    window.remoteexit = function () {
+        console.log("Exiting")
+        window.wallpaperAPI.popupsuccess("");
+        restartipc.send("exit");
     }
 
     window.history.replaceState({ path: newurl.toString() }, '', newurl.toString());
@@ -244,6 +280,12 @@ if (controlPort == null) {
             x.text().then(y => {
 
                 DotNet.invokeMethod("WallpaperUI", "UpdateAddonData",y);
+            })
+        });
+        fetch("http://localhost:" + controlPort + "/disabledaddons").then(x => {
+            x.text().then(y => {
+
+                DotNet.invokeMethod("WallpaperUI", "UpdateDisabledAddonData", y);
             })
         });
         window.top.postMessage("ready", "*");
@@ -269,6 +311,12 @@ if (controlPort == null) {
             x.text().then(y => {
 
                 DotNet.invokeMethod("WallpaperUI", "UpdateAddonData", y);
+            })
+        });
+        fetch("http://localhost:" + controlPort + "/disabledaddons").then(x => {
+            x.text().then(y => {
+
+                DotNet.invokeMethod("WallpaperUI", "UpdateDisabledAddonData", y);
             })
         });
     }

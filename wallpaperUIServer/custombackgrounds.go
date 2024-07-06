@@ -321,6 +321,10 @@ func LoadAllBackgroundsFromAddons() (ResultResponse2, error) {
 	for i := 0; i < len(addons); i++ {
 		addon := addons[i]
 		if addon.IsDir() {
+			if _, err := os.Stat(ADDONS_PATH + "/" + addon.Name() + "/disabled"); err == nil {
+				fmt.Println("Addon " + addon.Name() + " is disabled")
+				continue
+			}
 			fmt.Println("Loading addon: " + addon.Name())
 			manifest, err := LoadManifest(ADDONS_PATH + "/" + addon.Name() + "/manifest.json")
 

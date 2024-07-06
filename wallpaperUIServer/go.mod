@@ -18,8 +18,10 @@ require (
 	github.com/getlantern/hidden v0.0.0-20190325191715-f02dbb02be55 // indirect
 	github.com/getlantern/ops v0.0.0-20190325191751-d70cb0d6f85f // indirect
 	github.com/getlantern/systray v1.2.2 // indirect
+	github.com/go-ole/go-ole v1.3.0 // indirect
 	github.com/go-stack/stack v1.8.0 // indirect
 	github.com/leonelquinteros/gorand v1.0.2 // indirect
+	github.com/mitchellh/go-ps v1.0.0 // indirect
 	github.com/oxtoacart/bpool v0.0.0-20190530202638-03653db5a59c // indirect
 	github.com/sqweek/dialog v0.0.0-20240226140203-065105509627 // indirect
 	golang.org/x/exp v0.0.0-20220321173239-a90fa8a75705 // indirect
