@@ -18,7 +18,7 @@ func reencodeVideoFile(inputfile string, outputfile string, codec string, qualit
 	// Example: reencodeVideoFile("input.mp4", "output.webm", "libvpx-vp9", "good")
 	// The above example will reencode input.mp4 to output.webm using the libvpx-vp9 codec with the good quality setting
 
-	process := exec.Command("ffmpeg", "-i", inputfile, "-c:v", codec, "-crf", quality, "-b:v", "0", "-profile:v", "0", "-threads", "0")
+	process := exec.Command("tools\\ffmpeg\\bin\\ffmpeg.exe", "-i", inputfile, "-c:v", codec, "-crf", quality, "-b:v", "0", "-profile:v", "0", "-threads", "0","-y")
 	if stripAudio {
 		process.Args = append(process.Args, "-an")
 	}
@@ -27,33 +27,48 @@ func reencodeVideoFile(inputfile string, outputfile string, codec string, qualit
 	go func() {
 		select {
 		case <-donechannel:
-			controlchannel <- "done"
 		case message := <-controlchannel:
 			if message == "stop" {
 				process.Process.Kill()
+			} else {
+				controlchannel <- message
 			}
 		}
 	}()
-	process.Run()
-	donechannel <- true
+	process.Stdout = os.Stdout
+	err := process.Run()
+	if err != nil {
+		controlchannel <- "error," + err.Error()
+	} else {
+		controlchannel <- "done"
+		donechannel <- true
+	}
 
 }
 
 func reencodeImageFile(inputfile string, outputfile string, controlchannel chan string) {
-	process := exec.Command("magick",inputfile,"-define","png:compression-filter=5","-define","png:compression-level=9","-define","png:compression-strategy=2",outputfile)
+	process := exec.Command("tools\\imagemagick\\magick.exe",inputfile,"-define","png:compression-filter=5","-define","png:compression-level=9","-define","png:compression-strategy=2",outputfile)
 	donechannel := make(chan bool)
 	go func() {
 		select {
 		case <-donechannel:
-			controlchannel <- "done"
+
 		case message := <-controlchannel:
 			if message == "stop" {
 				process.Process.Kill()
+			} else {
+				controlchannel <- message
 			}
 		}
 	}()
-	process.Run()
-	donechannel <- true
+	process.Stdout = os.Stdout
+	err := process.Run()
+	if err != nil {
+		controlchannel <- "error," + err.Error()
+	} else {
+		controlchannel <- "done"
+		donechannel <- true
+	}
 
 }
 
@@ -65,7 +80,7 @@ func startReencodingSub(inputfile string, controlchannel chan string, specificty
 				return "", err
 			}
 			go func() {
-				reencodeVideoFile(inputfile, outpath, "libaom-av1", "23", true, controlchannel)
+				reencodeVideoFile(inputfile, outpath, "libsvtav1", "23", true, controlchannel)
 			}()
 			return outpath, nil
 		case "Image":
@@ -81,7 +96,15 @@ func startReencodingSub(inputfile string, controlchannel chan string, specificty
 			go func() {
 				controlchannel <- "askuser"
 				specifiedtype := <-controlchannel
-				startReencodingSub(inputfile, controlchannel, specifiedtype)
+				if (specifiedtype == "cancel") {
+					return
+				}
+				outpath, error := startReencodingSub(inputfile, controlchannel, specifiedtype)
+				if error != nil {
+					controlchannel <- "error," + error.Error()
+				} else {
+					controlchannel <- outpath
+				}
 			}()
 			return "", nil
 	}

@@ -14,6 +14,12 @@ func (m *MessageHub[T]) WaitForMessage() T {
 	return <-c
 }
 
+func (m *MessageHub[T]) WaitForMessageForSelect() chan T {
+	c := make(chan T)
+	m.receivers = append(m.receivers, c)
+	return c
+}
+
 func (m *MessageHub[T]) SendMessage(message T) {
 	for _, c := range m.receivers {
 		c <- message

@@ -49,7 +49,18 @@ func simpleBackgroundHandler(w http.ResponseWriter, r *http.Request) {
 		Filter("Other files","*").Load()
 		if err != nil {
 			log.Println(err)
-			w.Write([]byte(fmt.Sprintf(`{"status":"cancelled"}`, err.Error())))
+			tmp := make(map[string]string)
+			tmp["error"] = err.Error()
+			tmp["status"] = "error"
+			tmp["guid"] = ""
+			tmp["resultfile"] = ""
+			data, err := json.Marshal(tmp)
+			if err != nil {
+				log.Println(err)
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			w.Write(data)
 			return
 		}
 
@@ -58,11 +69,30 @@ func simpleBackgroundHandler(w http.ResponseWriter, r *http.Request) {
 		resultfile, err := startReencoding(zipPath2, encodertochan[encodingguid])
 		if err != nil {
 			log.Println(err)
-			w.Write([]byte(fmt.Sprintf(`{"error":"%v","status":"errorprestart"}`, err.Error())))
-			w.WriteHeader(http.StatusInternalServerError)
+			tmp := make(map[string]string)
+			tmp["error"] = err.Error()
+			tmp["status"] = "error"
+			tmp["guid"] = ""
+			tmp["resultfile"] = ""
+			data, err := json.Marshal(tmp)
+			if err != nil {
+				log.Println(err)
+				w.WriteHeader(http.StatusInternalServerError)
+			}
+			w.Write(data)
 			return
 		}
-		w.Write([]byte(fmt.Sprintf(`{"guid":"%v","resultfile":"%v","status":"encoding"}`, encodingguid,resultfile)))
+		tmp := make(map[string]string)
+		tmp["error"] = ""
+		tmp["status"] = "encoding"
+		tmp["guid"] = encodingguid
+		tmp["resultfile"] = resultfile
+		data, err := json.Marshal(tmp)
+		if err != nil {
+			log.Println(err)
+			return
+		}
+		w.Write(data)
 		return;
 
 		cachedpreferences["simplebackground"] = zipPath2
@@ -80,7 +110,31 @@ func getEncodingStatus(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	if r.Method == "GET" {
 		if val, ok := encodertochan[r.URL.Query().Get("guid")]; ok {
-			w.Write([]byte(fmt.Sprintf(`{"status":"%v"}`, <-val)))
+			if (r.URL.Query().Get("action") == "status") {
+				result := <-val
+				_ , err := w.Write([]byte(result))
+				if err != nil {
+					log.Println("GETENCODINGSTATUS " + err.Error())
+					val <- result
+				}
+
+
+			} else {
+				var tmp = make(map[string]string)
+				data2 := <- val
+				tmp["status"] = data2
+				data, err := json.Marshal(tmp)
+				if err != nil {
+					log.Println("GETENCODINGSTATUS " + err.Error())
+					w.WriteHeader(http.StatusInternalServerError)
+					return
+				}
+				_ , err = w.Write(data)
+				if err != nil {
+					log.Println("GETENCODINGSTATUS " + err.Error())
+					val <- data2
+				}
+			}
 		} else {
 			w.WriteHeader(http.StatusNotFound)
 		}
@@ -89,6 +143,7 @@ func getEncodingStatus(w http.ResponseWriter, r *http.Request) {
 		if val, ok := encodertochan[r.URL.Query().Get("guid")]; ok {
 			if r.URL.Query().Has("action") {
 				val <- r.URL.Query().Get("action")
+
 			} else {
 				w.WriteHeader(http.StatusBadRequest)
 			}

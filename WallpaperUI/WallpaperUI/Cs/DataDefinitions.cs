@@ -3,6 +3,65 @@ using System.Text.Json.Serialization;
 
 namespace WallpaperUI.Cs
 {
+    public class SimpleBackgroundResponse
+    {
+        public string EncodingGUID { get; set; }
+        public string ResultFile { get; set; }
+        public string Status { get; set; }
+
+        public string Error { get; set; }
+
+        [JsonConstructor]
+        public SimpleBackgroundResponse(string EncodingGUID, string ResultFile, string Status, string error)
+        {
+            this.EncodingGUID = EncodingGUID;
+            this.ResultFile = ResultFile;
+            this.Status = Status;
+            this.Error = error;
+        }
+
+        public static SimpleBackgroundResponse FromJsonElement(JsonElement x)
+        {
+            SimpleBackgroundResponse simpleBackgroundResponse = new SimpleBackgroundResponse(
+                x.GetProperty("guid").GetString()!,
+                x.GetProperty("resultfile").GetString()!,
+                x.GetProperty("status").GetString()!
+                , x.GetProperty("error").GetString()!
+                );
+            return simpleBackgroundResponse;
+        }
+
+        public SimpleBackgroundResponse Cloned()
+        {
+            var serialized = JsonSerializer.Serialize( this );
+            return JsonSerializer.Deserialize<SimpleBackgroundResponse>(serialized);
+        }
+    }
+
+    public class EncodingStatus
+    {
+        public string Status { get; set; }
+        [JsonConstructor]
+        public EncodingStatus(string Status)
+        {
+            this.Status = Status;
+        }
+
+        public static EncodingStatus FromJsonElement(JsonElement x)
+        {
+            EncodingStatus status = new EncodingStatus(
+                x.GetProperty("status").GetString()!
+                );
+            return status;
+        }
+
+        public EncodingStatus Cloned()
+        {
+            var serialized = JsonSerializer.Serialize( this );
+            return JsonSerializer.Deserialize<EncodingStatus>(serialized);
+        }
+
+    }
     public class TemplateCustomBackground
     {
         public string LoaderBackgroundID { get; }

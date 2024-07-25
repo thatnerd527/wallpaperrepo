@@ -1,4 +1,5 @@
-﻿<div style="
+﻿@using System.Text.Json
+<div style="
                 font-size: 26px;
                 font-weight: 600;
                         ">
@@ -13,6 +14,64 @@
                         new Uri("http://127.0.0.1:" + req + "/simplebackground")
                     );
                     var result = await client.PostAsync(res.Uri, null);
+                    var data = await result.Content.ReadAsStringAsync();
+
+                    var decoded = SimpleBackgroundResponse.FromJsonElement(JsonSerializer.Deserialize<JsonElement>(data)!);
+                    switch (decoded.Status) {
+                        case "cancelled":
+                            return;
+                        case "errorprestart":
+                            encodingErrorInPrestart = true;
+                            encodingError = true;
+                            error = decoded.Error;
+                            showEncodingDialog = true;
+                            break;
+                        case "encoding":
+                            resultFile = decoded.ResultFile;
+                            encodingID = decoded.EncodingGUID;
+                            encodingError = false;
+                            encodingErrorInPrestart = false;
+                            showEncodingDialog = true;
+                            break;
+                    }
+                    res = new UriBuilder(
+                        new Uri("http://127.0.0.1:" + req + "/getencodingstatus")
+                    );
+                    res.Query = "guid=" + encodingID;
+                    StateHasChanged();
+                    HttpResponseMessage? result2 = null;
+                    while (result2 == null) {
+                        try {
+                            result2 = await client.GetAsync(res.Uri);
+                        } catch (Exception) {
+                            await Task.Delay(1000);
+                            continue;
+                        }
+                    }
+                    var data2 = await result2.Content.ReadAsStringAsync();
+                    var decoded2 = EncodingStatus.FromJsonElement(JsonSerializer.Deserialize<JsonElement>(data2)!);
+                    switch (decoded2.Status) {
+                        case "askuser":
+                            showAskMediaTypeDialog = true;
+                            showEncodingDialog = false;
+                            break;
+                        case "done":
+                            App.Instance.preferencesManager.Set("simplebackground", resultFile);
+                            showEncodingDialog = false;
+                            break;
+                        default:
+                            if (cancelEncoding) {
+                                cancelEncoding = false;
+                                return;
+                            }
+                            encodingError  = true;
+                            error = decoded2.Status;
+                            showEncodingDialog = true;
+                            encodingErrorInPrestart = false;
+                            break;
+                    }
+                    StateHasChanged();
+
 
                 })">
         <FluentIcon Value="@(new Icons.Regular.Size20.Add())" Slot="start" Color="Color.Neutral"></FluentIcon>
@@ -141,15 +200,156 @@
                 font-size: 26px;
                 font-weight: 600;
                             ">
-            Converting media.
+            @(encodingError ? "Error" : "Converting media.")
         </div>
         <div class="h-8"></div>
-        Before we can set your wallpaper, we must first convert this wallpaper into a format that can be read by our program. Please wait. This will take a moment. 
+        @(encodingError ? error : "Before setting this file as a wallpaper, the file needs to be converted in order to be able to be set as a wallpaper. So please wait while we convert your files. If you're on battery power, please plug in your device to wall power now.")
+        <div class="h-8"></div>
+        <FluentProgress Indeterminate="true"></FluentProgress>
         <div class="h-8"></div>
         <div class="flex w-full flex-row items-end justify-end">
-            <FluentButton Appearance="Appearance.Stealth" @onclick="@(() => {showConfirmDialog=false;})">
+            <FluentButton Appearance="Appearance.Stealth" @onclick="@(async () => {
+                if (!encodingError) {
+                    var req = App.Instance.controlPort;
+                    var res = new UriBuilder(
+                            new Uri("http://127.0.0.1:" + req + "/getencodingstatus")
+                        );
+                    res.Query = "guid=" + encodingID + "&action=stop";
+                    var result2 = await client.PostAsync(res.Uri, new StringContent(""));
+                    var data2 = await result2.Content.ReadAsStringAsync();
+                }
+                showEncodingDialog=false;
+                cancelEncoding = true;
+                StateHasChanged();
+               
+            })">
                 Cancel
             </FluentButton>
+        </div>
+    </div>
+</div>
+<div class="card2 absolute left-0 top-0 h-full w-full flex-col items-center justify-center"
+     style="
+        display: @(showAskMediaTypeDialog ? "flex" : "none");
+    ">
+    <div class="m-8 bg-neutral-700 p-8" style="
+        border-radius: 12px;
+    ">
+        <div style="
+                font-size: 26px;
+                font-weight: 600;
+                            ">
+            Specify media type
+        </div>
+        <div class="h-8"></div>
+        The files media type seems to be unidentifiable by the system. Please select the media type below. 
+        <div class="h-8"></div>
+        <div class="flex w-full flex-row items-center justify-center">
+            <FluentButton Appearance="Appearance.Stealth" @onclick="@(async () => {
+                    var req = App.Instance.controlPort;
+                    var res = new UriBuilder(
+                            new Uri("http://127.0.0.1:" + req + "/getencodingstatus")
+                        );
+                    res.Query = "guid=" + encodingID + "&action=Video";
+                    var result2 = await client.PostAsync(res.Uri, new StringContent(""));
+                    var data2 = await result2.Content.ReadAsStringAsync();
+                    res.Query = "guid=" + encodingID + "&action=status";
+                    resultFile = await client.GetStringAsync(res.Uri);
+                    res.Query = "guid=" + encodingID;
+                    result2 = null;
+                    while (result2 == null) {
+                        try {
+                            result2 = await client.GetAsync(res.Uri);
+                        } catch (Exception) {
+                            await Task.Delay(1000);
+                            continue;
+                        }
+                    }
+                    data2 = await result2.Content.ReadAsStringAsync();
+                    var decoded2 = EncodingStatus.FromJsonElement(JsonSerializer.Deserialize<JsonElement>(data2)!);
+                    switch (decoded2.Status) {
+                        case "done":
+                            App.Instance.preferencesManager.Set("simplebackground", resultFile);
+                            showEncodingDialog = false;
+                            break;
+                        default:
+                        if (cancelEncoding) {
+                                cancelEncoding = false;
+                                return;
+                            }
+                            encodingError  = true;
+                            error = decoded2.Status;
+                            showEncodingDialog = true;
+                            encodingErrorInPrestart = false;
+                            break;
+                    }
+                    StateHasChanged();
+            })" Class="w-full h-full min-h-20" Style="height: 100%;">
+                <FluentIcon Value="@(new Icons.Regular.Size20.Video())" Slot="start" Color="Color.Neutral"></FluentIcon>
+                Video
+            </FluentButton>
+            <div class="min-h-20 w-4"></div>
+            <FluentButton Appearance="Appearance.Stealth" @onclick="@(async () => {
+                    var req = App.Instance.controlPort;
+                    var res = new UriBuilder(
+                            new Uri("http://127.0.0.1:" + req + "/getencodingstatus")
+                        );
+                    res.Query = "guid=" + encodingID + "&action=Image";
+                    var result2 = await client.PostAsync(res.Uri, new StringContent(""));
+                    var data2 = await result2.Content.ReadAsStringAsync();
+                    res.Query = "guid=" + encodingID + "&action=status";
+                    resultFile = await client.GetStringAsync(res.Uri);
+                    res.Query = "guid=" + encodingID;
+                    result2 = null;
+                    while (result2 == null) {
+                        try {
+                            result2 = await client.GetAsync(res.Uri);
+                        } catch (Exception) {
+                            await Task.Delay(1000);
+                            continue;
+                        }
+                    }
+                    data2 = await result2.Content.ReadAsStringAsync();
+                    var decoded2 = EncodingStatus.FromJsonElement(JsonSerializer.Deserialize<JsonElement>(data2)!);
+                    switch (decoded2.Status) {
+                        case "done":
+                            App.Instance.preferencesManager.Set("simplebackground", resultFile);
+                            showEncodingDialog = false;
+                            break;
+                        default:
+                        if (cancelEncoding) {
+                                cancelEncoding = false;
+                                return;
+                            }
+                            encodingError  = true;
+                            error = decoded2.Status;
+                            showEncodingDialog = true;
+                            encodingErrorInPrestart = false;
+                            break;
+                    }
+                    StateHasChanged();
+            })" Class="w-full h-full min-h-20" Style="height: 100%;">
+            <FluentIcon Value="@(new Icons.Regular.Size20.Image())" Slot="start" Color="Color.Neutral"></FluentIcon>
+                Image
+            </FluentButton>
+        </div>
+        <div class="h-8"></div>
+        <div class="flex w-full flex-row items-end justify-end">
+            <FluentButton Appearance="Appearance.Stealth" @onclick="@(async () => {
+                    var req = App.Instance.controlPort;
+                    var res = new UriBuilder(
+                            new Uri("http://127.0.0.1:" + req + "/getencodingstatus")
+                        );
+                    res.Query = "guid=" + encodingID + "&action=cancel";
+                    var result2 = await client.PostAsync(res.Uri, new StringContent(""));
+                    var data2 = await result2.Content.ReadAsStringAsync();
+                    showAskMediaTypeDialog = false;
+                    showEncodingDialog = false;
+                    StateHasChanged();
+            })">
+                Cancel
+            </FluentButton>
+
         </div>
     </div>
 </div>
@@ -161,11 +361,19 @@
     private HttpClient client = null;
     public static Backgrounds Instance = null;
     private bool showEncodingDialog = false;
+    private bool showAskMediaTypeDialog = false;
+    private string encodingID = "";
+    private string error = "";
+    private string resultFile = "";
+    private bool encodingError = false;
+    private bool cancelEncoding = false;
+    private bool encodingErrorInPrestart = false;
 
     protected override void OnInitialized()
     {
         Instance = this;
         client = hcf.CreateClient();
+        client.Timeout = Timeout.InfiniteTimeSpan;
     }
 
     public void Refresh()

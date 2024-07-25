@@ -48,3 +48,5 @@ wallpaperUIServer/addons/addontemplate/disabled
 /addontemplate/media/backgrounds/image_3.jpg
 /addontemplate/media/backgrounds/Sequence 1.webm
 /wallpaperInstaller/uninstall.exe
+wallpaperUIServer/result/reencoded.png
+wallpaperUIServer/result/reencoded.webm
