@@ -27,6 +27,7 @@
                             showEncodingDialog = true;
                             break;
                         case "encoding":
+                        cancelEncoding = false;
                             resultFile = decoded.ResultFile;
                             encodingID = decoded.EncodingGUID;
                             encodingError = false;
@@ -56,6 +57,7 @@
                             showEncodingDialog = false;
                             break;
                         case "done":
+                            App.Instance.preferencesManager.Remove("simplebackground");
                             App.Instance.preferencesManager.Set("simplebackground", resultFile);
                             showEncodingDialog = false;
                             break;
@@ -269,6 +271,7 @@
                     var decoded2 = EncodingStatus.FromJsonElement(JsonSerializer.Deserialize<JsonElement>(data2)!);
                     switch (decoded2.Status) {
                         case "done":
+                            App.Instance.preferencesManager.Remove("simplebackground");
                             App.Instance.preferencesManager.Set("simplebackground", resultFile);
                             showEncodingDialog = false;
                             break;
@@ -313,6 +316,7 @@
                     var decoded2 = EncodingStatus.FromJsonElement(JsonSerializer.Deserialize<JsonElement>(data2)!);
                     switch (decoded2.Status) {
                         case "done":
+                            App.Instance.preferencesManager.Remove("simplebackground");
                             App.Instance.preferencesManager.Set("simplebackground", resultFile);
                             showEncodingDialog = false;
                             break;

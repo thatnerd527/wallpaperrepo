@@ -5,6 +5,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"syscall"
 )
 
 var encodertochan = make(map[string]chan string)
@@ -36,6 +37,7 @@ func reencodeVideoFile(inputfile string, outputfile string, codec string, qualit
 		}
 	}()
 	process.Stdout = os.Stdout
+	process.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 	err := process.Run()
 	if err != nil {
 		controlchannel <- "error," + err.Error()

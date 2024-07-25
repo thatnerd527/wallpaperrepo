@@ -51,7 +51,7 @@ func simpleBackgroundHandler(w http.ResponseWriter, r *http.Request) {
 			log.Println(err)
 			tmp := make(map[string]string)
 			tmp["error"] = err.Error()
-			tmp["status"] = "error"
+			tmp["status"] = "cancelled"
 			tmp["guid"] = ""
 			tmp["resultfile"] = ""
 			data, err := json.Marshal(tmp)
@@ -71,7 +71,7 @@ func simpleBackgroundHandler(w http.ResponseWriter, r *http.Request) {
 			log.Println(err)
 			tmp := make(map[string]string)
 			tmp["error"] = err.Error()
-			tmp["status"] = "error"
+			tmp["status"] = "errorprestart"
 			tmp["guid"] = ""
 			tmp["resultfile"] = ""
 			data, err := json.Marshal(tmp)
