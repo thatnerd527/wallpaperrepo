@@ -24,9 +24,6 @@ let port = () => {
 
 connectWebSocket();
 
-
-
-
 const load = (win) => {
   if (DEV) {
     win.loadURL("http://localhost:5173/");
@@ -142,6 +139,10 @@ const createSecurePopupWindow = (
 };
 
 const createPopup = (url, clientid, appname, favicon, title, trackingid) => {
+  if (clientid == "system") {
+    createSecurePopupWindow(url, clientid, appname, favicon, title, trackingid);
+    return;
+  }
   const win = new BrowserWindow({
     width: 650,
     height: 450,
@@ -180,19 +181,18 @@ const createPopup = (url, clientid, appname, favicon, title, trackingid) => {
         data.favicon,
         data.title,
         data.trackingid
-        );
-        if (!cancelled) {
-          cancelled = true;
-          win.close();
-        }
+      );
+      if (!cancelled) {
+        cancelled = true;
+        win.close();
+      }
     });
     ipcMain.once(`${trackingid}-popupcancel`, () => {
       if (!cancelled) {
         sendPopupCancel(trackingid);
-          cancelled = true;
-          win.close();
+        cancelled = true;
+        win.close();
       }
-
     });
   });
 
@@ -230,8 +230,8 @@ const createInputWindow = (inputtype, placeholder, maxlength, trackingid) => {
     ipcMain.once(`${trackingid}-inputsuccess`, (event, data) => {
       sendInputResult(trackingid, data);
       if (!cancelled) {
-          cancelled = true;
-          win.close();
+        cancelled = true;
+        win.close();
       }
     });
     ipcMain.once(`${trackingid}-inputcancel`, () => {

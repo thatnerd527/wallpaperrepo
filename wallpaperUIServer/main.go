@@ -61,6 +61,7 @@ func startPopupApp() {
 
 
 func main() {
+	fmt.Println("Starting SystemHub")
 	if _, err := os.Stat(".pid"); err == nil {
 		data, err := os.ReadFile(".pid")
 		if err != nil {
@@ -113,6 +114,7 @@ func main() {
 	secureMux.HandleFunc("/restartipc",restartIPC)
 	secureMux.HandleFunc("/installaddon",installAddon)
 	secureMux.HandleFunc("/simplebackground",simpleBackgroundHandler)
+	secureMux.HandleFunc("/getencodingstatus",getEncodingStatus)
 	secureMux.HandleFunc("/autostart",autoStartHandler)
 	secureMux.HandleFunc("/addonchanges",applyAddonChanges)
 
@@ -191,33 +193,41 @@ func mediaRegistry(w http.ResponseWriter, r *http.Request) {
 
 func redirectHandler(w http.ResponseWriter, r *http.Request) {
 	if (!r.URL.Query().Has("embedkey") || r.URL.Query().Get("embedkey") != embedKey) {
+		fmt.Println("EXPECTED: ", embedKey + " GOT: ", r.URL.Query().Get("embedkey"))
 		w.Header().Set("Content-Security-Policy", "frame-ancestors 'none'")
+		w.Header().Set("Cache-Control", "no-store")
 	}
+		fmt.Println("Redirecting to ", r.URL.Query().Get("url"))
+		url2 := r.URL.Query().Get("url")
+		newurl, err := url.Parse(url2)
+		if err != nil {
+			fmt.Println(err)
+		}
 
-	url2 := r.URL.Query().Get("url")
-	newurl, err := url.Parse(url2)
-	if err != nil {
-		fmt.Println(err)
-	}
+		// Additional maybe not needed security check, but just in case to prevent redirecting to other ports.
+		// Not that escaping an Iframe is even possible, but just in case.
+		if (allowedredirectport != 0 && newurl.Port() != strconv.Itoa(allowedredirectport)){
+			w.WriteHeader(http.StatusForbidden)
+			return
+		}
+		allowedredirectport, _ = strconv.Atoi(newurl.Port())
+		query := newurl.Query()
+		query.Add("controlPort", strconv.Itoa(secureport))
+		newurl.RawQuery = query.Encode()
+		http.Redirect(w, r, newurl.String(), http.StatusFound)
 
-	// Additional maybe not needed security check, but just in case to prevent redirecting to other ports.
-	// Not that escaping an Iframe is even possible, but just in case.
-	if (allowedredirectport != 0 && newurl.Port() != strconv.Itoa(allowedredirectport)){
-		w.WriteHeader(http.StatusForbidden)
-		return
-	}
-	allowedredirectport, _ = strconv.Atoi(newurl.Port())
-	query := newurl.Query()
-	query.Add("controlPort", strconv.Itoa(secureport))
-	newurl.RawQuery = query.Encode()
-	http.Redirect(w, r, newurl.String(), http.StatusFound)
+
 }
 
 func fileHandler(w http.ResponseWriter, r *http.Request) {
 	if (!r.URL.Query().Has("embedkey") || r.URL.Query().Get("embedkey") != embedKey) {
+		fmt.Println("EXPECTED: ", embedKey + " GOT: ", r.URL.Query().Get("embedkey"))
 		w.Header().Set("Content-Security-Policy", "frame-ancestors 'none'")
 	}
+	w.Header().Set("Cache-Control", "no-store")
 	http.ServeFile(w, r, path.Join("public", "wwwroot", r.URL.Path))
+
+
 }
 
 

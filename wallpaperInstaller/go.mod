@@ -7,6 +7,7 @@ replace github.com/thatnerd/betterapng => ../betterapng
 require github.com/thatnerd/betterapng v0.0.0-00010101000000-000000000000
 
 require (
+	github.com/TheTitanrain/w32 v0.0.0-20180517000239-4f5cfb03fabf // indirect
 	github.com/niemeyer/pretty v0.0.0-20200227124842-a10e7caefd8e // indirect
 	gopkg.in/check.v1 v1.0.0-20200227125254-8fa46927fb4f // indirect
 )
@@ -14,6 +15,7 @@ require (
 require (
 	fyne.io/fyne/v2 v2.4.5
 	github.com/go-ole/go-ole v1.3.0
+	github.com/sqweek/dialog v0.0.0-20240226140203-065105509627
 	golang.org/x/exp v0.0.0-20220321173239-a90fa8a75705
 	golang.org/x/image v0.17.0
 )

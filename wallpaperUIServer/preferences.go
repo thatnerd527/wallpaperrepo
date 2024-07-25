@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"reflect"
 
 	"github.com/gorilla/websocket"
 )
@@ -20,15 +21,7 @@ var preferenceschannel = CreateMessageHub[PreferenceUpdate]()
 var cachedpreferences map[string]interface{} = make(map[string]interface{})
 
 func isJsonSame(a map[string]interface{}, b map[string]interface{}) bool {
-	if len(a) != len(b) {
-		return false
-	}
-	for key, value := range a {
-		if b[key] != value {
-			return false
-		}
-	}
-	return true
+	return reflect.DeepEqual(a, b)
 }
 
 func preferencesSystem(w http.ResponseWriter, r *http.Request) {

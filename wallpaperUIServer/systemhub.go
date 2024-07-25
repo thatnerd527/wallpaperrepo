@@ -6,7 +6,9 @@ import (
 	"net/http"
 	"os"
 	"path"
+	"path/filepath"
 	"time"
+
 	"github.com/go-ole/go-ole"
 	"github.com/go-ole/go-ole/oleutil"
 )
@@ -72,6 +74,7 @@ func autoStartHandler(w http.ResponseWriter, r *http.Request) {
 		log.Fatal(err)
 	}
 	shortcut := path.Join(ufolder, "AppData", "Roaming", "Microsoft", "Windows", "Start Menu", "Programs", "Startup", "Wallpaper System UI Startup.lnk")
+	cwd := path.Join(ufolder, "AppData", "Local", "Programs","Wallpaper System")
 	if r.Method == "GET" {
 		_, ok := os.Stat(shortcut)
 		if ok != nil {
@@ -83,7 +86,12 @@ func autoStartHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "POST" {
 		if _, ok := r.URL.Query()["enable"]; ok {
 			if _, ok := os.Stat(shortcut); ok != nil {
-				createShortcut(shortcut, os.Args[0], "")
+				path, err:= filepath.Abs(cwd)
+				if err != nil {
+					log.Fatal(err)
+				}
+
+				createShortcut(shortcut, os.Args[0], path)
 				w.Write([]byte("true"))
 				w.WriteHeader(http.StatusOK)
 			} else {

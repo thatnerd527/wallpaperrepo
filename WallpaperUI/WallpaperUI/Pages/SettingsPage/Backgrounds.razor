@@ -67,9 +67,14 @@
             <div class="h-4"></div>
             <div class="card flex flex-row items-center" style="padding-left: 16px; overflow: overlay;">
                 <div style="min-width: max-content" class="flex flex-row">
-                    <FluentButton Appearance="Appearance.Neutral" @onclick="() => {
+                        <FluentButton Appearance="Appearance.Neutral" @onclick="@(async () => {
+                                    var req = App.Instance.controlPort;
+                                    var res = new UriBuilder(
+                                        new Uri("http://127.0.0.1:" + req + "/simplebackground?delete=true")
+                                    );
+                                    var result = await client.GetAsync(res.Uri);
                                     Home.Instance.SetBackground(item.LoaderBackgroundID);
-                            }">
+                            })">
                         <FluentIcon Value="@(new Icons.Regular.Size20.Checkmark())" Slot="start" Color="Color.Neutral"></FluentIcon>
                         Set as Background
                     </FluentButton>
@@ -107,9 +112,14 @@
             <div class="h-4"></div>
             <div class="card flex flex-row items-center" style="padding-left: 16px; overflow: overlay;">
                 <div style="min-width: max-content" class="flex flex-row">
-                    <FluentButton Appearance="Appearance.Neutral" @onclick="() => {
+                    <FluentButton Appearance="Appearance.Neutral" @onclick="@(async () => {
+                                    var req = App.Instance.controlPort;
+                                    var res = new UriBuilder(
+                                        new Uri("http://127.0.0.1:" + req + "/simplebackground?delete=true")
+                                    );
+                                    var result = await client.GetAsync(res.Uri);
                                     Home.Instance.SetBackground(item.LoaderBackgroundID);
-                            }">
+                            })">
                         <FluentIcon Value="@(new Icons.Regular.Size20.Checkmark())" Slot="start" Color="Color.Neutral"></FluentIcon>
                         Set as Background
                     </FluentButton>
@@ -120,6 +130,29 @@
         </FluentAccordionItem>
     }
 </FluentAccordion>
+<div class="card2 absolute left-0 top-0 h-full w-full flex-col items-center justify-center"
+     style="
+        display: @(showEncodingDialog ? "flex" : "none");
+    ">
+    <div class="m-8 bg-neutral-700 p-8" style="
+        border-radius: 12px;
+    ">
+        <div style="
+                font-size: 26px;
+                font-weight: 600;
+                            ">
+            Converting media.
+        </div>
+        <div class="h-8"></div>
+        Before we can set your wallpaper, we must first convert this wallpaper into a format that can be read by our program. Please wait. This will take a moment. 
+        <div class="h-8"></div>
+        <div class="flex w-full flex-row items-end justify-end">
+            <FluentButton Appearance="Appearance.Stealth" @onclick="@(() => {showConfirmDialog=false;})">
+                Cancel
+            </FluentButton>
+        </div>
+    </div>
+</div>
 
 @inject IHttpClientFactory hcf
 @inject IDialogService DialogService
@@ -127,6 +160,7 @@
 @code {
     private HttpClient client = null;
     public static Backgrounds Instance = null;
+    private bool showEncodingDialog = false;
 
     protected override void OnInitialized()
     {

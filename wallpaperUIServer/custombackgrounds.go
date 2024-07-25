@@ -325,6 +325,11 @@ func LoadAllBackgroundsFromAddons() (ResultResponse2, error) {
 				fmt.Println("Addon " + addon.Name() + " is disabled")
 				continue
 			}
+			if _, err := os.Stat(ADDONS_PATH + "/" + addon.Name() + "/manifest.json"); err != nil {
+				log.Println(err)
+				fmt.Errorf("Error loading manifest for addon %s: %v", addon.Name(), err)
+				continue;
+			}
 			fmt.Println("Loading addon: " + addon.Name())
 			manifest, err := LoadManifest(ADDONS_PATH + "/" + addon.Name() + "/manifest.json")
 

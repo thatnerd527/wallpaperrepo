@@ -13,14 +13,13 @@ import (
 )
 var guidtofilepath = make(map[string]string)
 
+
 func FileNameToMediaType(filename string) string {
 	switch filepath.Ext(filename) {
-	case ".mp4",".webm",".mov",".avi":
+	case ".mp4",".webm",".mov",".avi",".mkv",".flv",".wmv",".mpg",".mpeg",".m4v",".3gp",".3g2":
 		return "Video"
 	case ".jpg", ".jpeg", ".png",".avif", ".webp", ".gif":
 		return "Image"
-	case ".mp3", ".wav", ".flac", ".ogg":
-		return "Audio"
 	default:
 		return "unknown"
 	}
@@ -46,11 +45,26 @@ func simpleBackgroundHandler(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Access-Control-Allow-Origin", "*")
 		zipPath2, err := dialog.File().Title("Select simple background file").
 		Filter("Image files", "jpg", "jpeg", "png", "avif", "webp", "gif").
-		Filter("WebM encoded with AV1, VP8, or VP9", "webm").Load()
+		Filter("Video Files", "mp4","webm","mov","avi","mkv","flv","wmv","mpg","mpeg","m4v","3gp","3g2").
+		Filter("Other files","*").Load()
 		if err != nil {
 			log.Println(err)
+			w.Write([]byte(fmt.Sprintf(`{"status":"cancelled"}`, err.Error())))
 			return
 		}
+
+		encodingguid := GenerateGUID()
+		encodertochan[encodingguid] = make(chan string)
+		resultfile, err := startReencoding(zipPath2, encodertochan[encodingguid])
+		if err != nil {
+			log.Println(err)
+			w.Write([]byte(fmt.Sprintf(`{"error":"%v","status":"errorprestart"}`, err.Error())))
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		w.Write([]byte(fmt.Sprintf(`{"guid":"%v","resultfile":"%v","status":"encoding"}`, encodingguid,resultfile)))
+		return;
+
 		cachedpreferences["simplebackground"] = zipPath2
 		message, err := json.Marshal(cachedpreferences)
 		if err != nil {
@@ -59,6 +73,28 @@ func simpleBackgroundHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		os.WriteFile("preferences.json", message, 0644)
 		preferenceschannel.SendMessage(PreferenceUpdate{cachedpreferences, GenerateGUID(), false})
+	}
+}
+
+func getEncodingStatus(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	if r.Method == "GET" {
+		if val, ok := encodertochan[r.URL.Query().Get("guid")]; ok {
+			w.Write([]byte(fmt.Sprintf(`{"status":"%v"}`, <-val)))
+		} else {
+			w.WriteHeader(http.StatusNotFound)
+		}
+	}
+	if r.Method == "POST" {
+		if val, ok := encodertochan[r.URL.Query().Get("guid")]; ok {
+			if r.URL.Query().Has("action") {
+				val <- r.URL.Query().Get("action")
+			} else {
+				w.WriteHeader(http.StatusBadRequest)
+			}
+		} else {
+			w.WriteHeader(http.StatusNotFound)
+		}
 	}
 }
 

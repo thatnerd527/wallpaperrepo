@@ -372,6 +372,12 @@ func LoadAllPanelsFromAddons() (ResultResponse, error) {
 				fmt.Println("Addon " + addon.Name() + " is disabled")
 				continue
 			}
+			if _, err := os.Stat(ADDONS_PATH + "/" + addon.Name() + "/manifest.json"); err != nil {
+				log.Println(err)
+				fmt.Errorf("Error loading manifest for addon %s: %v", addon.Name(), err)
+				continue;
+			}
+
 		manifest, err := LoadManifest(ADDONS_PATH + "/" + addon.Name() + "/manifest.json")
 
 		if err != nil {

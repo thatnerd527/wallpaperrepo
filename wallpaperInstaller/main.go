@@ -8,6 +8,7 @@ import (
 	"image/color"
 	"image/png"
 	"log"
+	"math"
 	"os"
 	"os/exec"
 	"path"
@@ -25,6 +26,7 @@ import (
 	"github.com/go-ole/go-ole"
 	"github.com/go-ole/go-ole/oleutil"
 	"github.com/google/uuid"
+	"github.com/sqweek/dialog"
 	"github.com/thatnerd/betterapng"
 )
 
@@ -37,6 +39,11 @@ type LoadingWidget struct {
 	images       [][]byte
 	imageConfigs []betterapng.BAPNGFrame
 	currentImage image.Image
+	window       fyne.Window
+}
+
+func (item *LoadingWidget) GetWindowCorrectRes() (float32, float32) {
+	return float32(item.BAPNG.GetWidth()) / item.window.Canvas().Scale(), float32(item.BAPNG.GetHeight()) / item.window.Canvas().Scale()
 }
 
 func GenerateGUID() string {
@@ -84,8 +91,15 @@ func createShortcut(shortcutPath, targetPath, workingDir string) error {
 	return nil
 }
 
-
 func (item *LoadingWidget) Update() {
+	w, h := item.GetWindowCorrectRes()
+	if item.window.Canvas().Size().Width-w > 1 || item.window.Canvas().Size().Height-h > 1 {
+		fmt.Println("Resizing window")
+		fmt.Println("Left: ", item.window.Canvas().Size().Width, "Right: ", float32(math.Round(float64(w))))
+		item.window.Resize(fyne.NewSize(w, h))
+		item.Image.SetMinSize(fyne.NewSize(w, h))
+		item.window.CenterOnScreen()
+	}
 	item.FrameCounter.SetText(fmt.Sprintf("%d", item.frame))
 	item.frame++
 	if item.frame >= uint64(item.BAPNG.GetNumberOfFrames()) {
@@ -128,7 +142,9 @@ func NewLoadingSplash() *LoadingWidget {
 	if err != nil {
 		log.Fatal(err)
 	}
-	item.Image.SetMinSize(fyne.NewSize(float32(image.Bounds().Dx()), float32(image.Bounds().Dy())))
+	fmt.Println(windowscale)
+	item.Image.SetMinSize(fyne.NewSize(float32(image.Bounds().Dx())*float32(windowscale), float32(image.Bounds().Dy())*float32(windowscale)))
+	item.Image.Resize(fyne.NewSize(float32(image.Bounds().Dx())*float32(windowscale), float32(image.Bounds().Dy())*float32(windowscale)))
 	item.frame = 0
 
 	item.ExtendBaseWidget(item)
@@ -149,25 +165,56 @@ func (item *LoadingWidget) CreateRenderer() fyne.WidgetRenderer {
 }
 
 func startBackgroundProcess(command string, args []string, cwd string) {
-    cmd := exec.Command(command, args...)
+	cmd := exec.Command(command, args...)
 	cmd.Dir = cwd
-    // For Windows, this detaches the process from the parent
-    cmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: syscall.CREATE_NEW_PROCESS_GROUP}
-    err := cmd.Start()
-    if err != nil {
-        log.Fatalf("Failed to start background process: %v", err)
-    }
-    // Note: We do not wait for the process to finish.
+	// For Windows, this detaches the process from the parent
+	cmd.SysProcAttr = &syscall.SysProcAttr{CreationFlags: syscall.CREATE_NEW_PROCESS_GROUP}
+	err := cmd.Start()
+	if err != nil {
+		log.Fatalf("Failed to start background process: %v", err)
+	}
+	// Note: We do not wait for the process to finish.
 }
 
+func toRegistryString(s string, quoteenscapsulate bool) string {
+	// Replace \ with \\
+	step1 := strings.ReplaceAll(s, "\\", "\\\\")
+	// Replace " with \"
+	step2 := strings.ReplaceAll(step1, "\"", "\\\"")
+	if quoteenscapsulate {
+		return "\\\"" + step2 + "\\\""
+	}
+	return step2
+}
+
+func windowsifyPath(s string) string {
+	return strings.ReplaceAll(s, "/", "\\")
+}
+
+func registerUninstall(installdir string) {
+	regfile, err := os.ReadFile("registrytemplate.reg")
+	if err != nil {
+		log.Fatal(err)
+	}
+	tostring := string(regfile)
+	tostring = strings.ReplaceAll(tostring, "{INSTALLFOLDER1}", "\\\"" + toRegistryString(installdir, false))
+	tostring = strings.ReplaceAll(tostring, "{INSTALLFOLDER2}", toRegistryString(installdir, false))
+	tostring = strings.ReplaceAll(tostring, "{APPNAME}", "Wallpaper System")
+	tostring = strings.ReplaceAll(tostring, "{APPID}", "WallpaperSystem")
+	tostring = strings.ReplaceAll(tostring, "{VERSION}", "1.0.0")
+	tostring = strings.ReplaceAll(tostring, "{COMPANYNAME}", "ThatNerd, of thatnerd527.xyz")
+	os.WriteFile("uninstall.reg", []byte(tostring), 0644)
+	exec.Command("reg", "import", "uninstall.reg").Run()
+
+}
 
 func postSetup(folder string) {
 	embedkey := GenerateGUID()
 	installerembed := path.Join(folder, "embedkey")
 	ufolder, err := os.UserHomeDir()
-			if err != nil {
-				log.Fatal(err)
-			}
+	if err != nil {
+		log.Fatal(err)
+	}
 	userstartupfolder := path.Join(ufolder, "AppData", "Roaming", "Microsoft", "Windows", "Start Menu", "Programs", "Startup")
 	startmenu := path.Join(ufolder, "AppData", "Roaming", "Microsoft", "Windows", "Start Menu", "Programs")
 	err = os.WriteFile(installerembed, []byte(embedkey), 0644)
@@ -185,7 +232,7 @@ func postSetup(folder string) {
 	if err != nil {
 		log.Fatal(err)
 	}
-	err = createShortcut(path.Join(userstartupfolder,"Wallpaper System UI Startup.lnk"), path.Join(folder, "wallpaperuiserver.exe"), folder)
+	err = createShortcut(path.Join(userstartupfolder, "Wallpaper System UI Startup.lnk"), path.Join(folder, "wallpaperuiserver.exe"), folder)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -205,35 +252,87 @@ func postSetup(folder string) {
 	}
 }
 
+
+
+func uninstall(folder string) {
+	// Uninstall the program
+	ufolder, err := os.UserHomeDir()
+	if err != nil {
+		log.Fatal("")
+	}
+
+	if _, err := os.Stat(path.Join(ufolder, "AppData", "Local", "Programs", "Wallpaper System",".pid")); err == nil {
+		dialog.Message("Please close the program before uninstalling").Title("Error").Error()
+		return
+	}
+	exec.Command("reg", "delete", "HKEY_CURRENT_USER\\Software\\Microsoft\\Windows\\CurrentVersion\\Uninstall\\WallpaperSystem","/f").Run()
+
+	userstartupfolder := path.Join(ufolder, "AppData", "Roaming", "Microsoft", "Windows", "Start Menu", "Programs", "Startup")
+	startmenu := path.Join(ufolder, "AppData", "Roaming", "Microsoft", "Windows", "Start Menu", "Programs")
+
+	os.Remove(path.Join(userstartupfolder, "Wallpaper System UI Startup.lnk"))
+	os.RemoveAll(path.Join(startmenu, "Wallpaper System"))
+	if (folder == "") {
+		folder = path.Join(ufolder, "AppData", "Local", "Programs", "Wallpaper System")
+	}
+	os.RemoveAll(folder)
+
+	dialog.Message("Uninstalled successfully").Title("Success").Info()
+	os.Remove(path.Join(ufolder, "AppData", "Local", "Programs", "Wallpaper System","uninstall.exe"))
+}
+
+var windowscale = 1.0
+var uninstallflag = false
+
 func main() {
 	a := app.New()
 	drv := a.Driver()
 	installdir := flag.String("installdir", "", "The directory to install the program to")
-	targetdir := ""
+	testanimation := flag.Bool("testanimation", false, "Test the animation, doesnt install anything until CTRL+C is pressed")
+
 	flag.Parse()
+
+	if uninstallflag {
+		uninstall(*installdir)
+		return
+
+	}
+
 	go func() {
-		if *installdir == "" {
-			folder, err := os.UserHomeDir()
+		if *testanimation {
+			return
+		}
+		folder, err := os.UserHomeDir()
 			if err != nil {
 				log.Fatal(err)
 			}
 
-			targetdir = path.Join(folder, "AppData", "Local", "Programs", "Wallpaper System")
-			filepath.Abs(targetdir)
+			var targetdir string
+			if *installdir == "" {
+				targetdir = path.Join(folder, "AppData", "Local", "Programs", "Wallpaper System")
+			} else {
+				targetdir = *installdir
+			}
+			targetdir, err = filepath.Abs(targetdir)
+			if err != nil {
+				log.Fatal(err)
+			}
 			extractZipToFolderWith7z("install.zip", targetdir)
 			postSetup(targetdir)
+			registerUninstall(windowsifyPath(targetdir))
 			a.Quit()
-		}
 	}()
 	if drv, ok := drv.(desktop.Driver); ok {
 		w := drv.CreateSplashWindow()
 
-		widget := NewLoadingSplash()
+		windowscale = float64(w.Canvas().Scale())
+		//w.SetFixedSize(true)
 
+		widget := NewLoadingSplash()
+		widget.window = w
 		w.SetContent(widget)
 		w.ShowAndRun()
 		// Customize your splash window here
 	}
-
 
 }
