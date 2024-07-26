@@ -56,9 +56,10 @@ tryConnect()
 </script>
 
 <template>
-  <iframe :src="src" v-show="loaded && receivedReady" class="w-full h-full" id="mainframe">
+  <iframe :src="src" v-show="loaded && receivedReady" class="w-full h-full transition-all ease-in-out duration-1000" id="mainframe">
 
   </iframe>
+  
   <div style="height: 100%; background-color: transparent;" class="text-white" v-show="!loaded || !receivedReady">
     <img src="./assets/background.png" class="absolute object-cover w-full h-full">
     </img>
