@@ -64,6 +64,7 @@ func reencodeImageFile(inputfile string, outputfile string, controlchannel chan 
 		}
 	}()
 	process.Stdout = os.Stdout
+	process.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 	err := process.Run()
 	if err != nil {
 		controlchannel <- "error," + err.Error()

@@ -1,0 +1,6 @@
+;!@Install@!UTF-8!
+Title="Wallpaper System"
+BeginPrompt="Do you want to install Wallpaper System"
+ExecuteFile="wallpaperInstaller.exe"
+Progress="yes"
+;!@InstallEnd@!

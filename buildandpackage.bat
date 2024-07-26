@@ -1,6 +1,7 @@
 @echo off
 echo Step -1: Removing output folders
 rmdir /s /q .\packaged
+del /q presfx.7z
 
 echo Step 0: Building all subprojects.
 call buildall.bat
@@ -21,3 +22,7 @@ xcopy .\wallpaperInstaller\registrytemplate.reg .\packaged
 xcopy .\installsplash.bapng .\packaged
 mkdir .\packaged\tools
 xcopy .\wallpaperInstaller\tools .\packaged\tools /s /e /y
+
+echo Step 4: Creating SFX.
+.\tools\7z\7za.exe a -mmt=on .\presfx.7z .\packaged\*
+copy /b 7zS2.sfx + config.txt + presfx.7z wallpaperSetup.exe /y
