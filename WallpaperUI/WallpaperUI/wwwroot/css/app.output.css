@@ -726,6 +726,14 @@ video {
   color: rgb(255 255 255 / var(--tw-text-opacity));
 }
 
+.CustomClass {
+  transition: 0.3s;
+}
+
+.CustomClass:hover {
+  background-color: #ff000026;
+}
+
 body {
   --body-font: "Segoe UI Variable", "Segoe UI", sans-serif;
   font-family: var(--body-font);

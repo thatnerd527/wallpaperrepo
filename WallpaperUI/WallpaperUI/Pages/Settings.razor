@@ -4,7 +4,7 @@
 <div style="
     padding: 16px;
     height: 100%;
-" class="flex flex-row">
+" class="duration flex flex-row">
     <FluentNavMenu Width="250">
         <FluentNavLink Icon="@(new Icons.Regular.Size24.PuzzlePiece())" @onclick="@(() => {
             screen = "addons";
@@ -21,10 +21,10 @@
     </FluentNavMenu>
 
     <div style="width: 24px;"></div>
-    <div class="h-full w-full" style="
+    <div class="h-full w-full CustomClass" style="
         padding: 16px;
         border-radius: 12px;
-        background-color: rgba(0,0,0,0.15);
+        background-color: #00000026;
         overflow: overlay;
     ">
         @if (screen == "addons")
@@ -33,7 +33,6 @@
         }
         @if (screen == "panels")
         {
-
             <Panels></Panels>
         }
         @if (screen == "backgrounds")
