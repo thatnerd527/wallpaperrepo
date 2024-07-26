@@ -14,22 +14,35 @@
 </div>
 <div class="h-4"></div>
 @Item(
-    @<FluentIcon Value="@(new Icons.Regular.Size24.Settings())" Color="Color.Neutral"></FluentIcon>,
-    "Header",
-    "Caption",
-    @<FluentButton Appearance="Appearance.Neutral">
-        Button
-    </FluentButton>
+    @<FluentIcon Value="@(new Icons.Regular.Size24.ArrowCounterclockwise())" Color="Color.Neutral"></FluentIcon>,
+    "Restart Application",
+    "In case something isn't working right, you may restart the application.",
+    @<FluentButton Appearance="Appearance.Neutral" @onclick="@(() => 
+        {
+            JS.InvokeVoidAsync("remoterestart");
+        })"> Proceed </FluentButton>
 )
 @Item(
-    @<FluentIcon Value="@(new Icons.Regular.Size24.Settings())" Color="Color.Neutral"></FluentIcon>,
-    "Header",
-    "Caption",
-    @<FluentButton Appearance="Appearance.Neutral">
-        Button
-    </FluentButton>
+    @<FluentIcon Value="@(new Icons.Regular.Size24.Dismiss())" Color="Color.Neutral"></FluentIcon>,
+    "Quit Application",
+    "Exit the application at will.",
+    @<FluentButton Appearance="Appearance.Neutral" @onclick="@(() => 
+        {
+            // TODO: Perhaps add a single-use modal that users needs to restart the app manually
+            JS.InvokeVoidAsync("remoteexit");
+        })"> Proceed </FluentButton>
     )
-<div class="card flex flex-row items-center" style="padding-left: 16px; overflow: overlay;">
+@Item(
+    @<FluentIcon Value="@(new Icons.Regular.Size24.ArrowReset())" Color="Color.Neutral"></FluentIcon>,
+    "Reset Settings",
+    "Bring everything back to its default state.",
+    @<FluentButton Appearance="Appearance.Accent" @onclick="@(() => 
+        {
+            App.Instance.preferencesManager.Clear();
+        })"> Proceed </FluentButton>
+    )
+
+@* <div class="card flex flex-row items-center" style="padding-left: 16px; overflow: overlay;">
     <FluentButton Appearance="Appearance.Neutral" @onclick="@(() => {
                     JS.InvokeVoidAsync("remoterestart");
 
@@ -52,13 +65,30 @@
         <FluentIcon Value="@(new Icons.Regular.Size20.ArrowReset())" Slot="start" Color="Color.Neutral"></FluentIcon>
         Reset Settings
     </FluentButton>
+</div> *@
+
+<div class="h-4"></div>
+
+<Addons></Addons>
+
+<div class="h-4"></div>
+<div style="
+                font-size: 20px;
+                font-weight: 500;
+                            ">
+    Advanced
 </div>
 <div class="h-4"></div>
-<div class="flex min-h-12 w-full p-4" style="border-radius: 12px; background-color: rgba(255,255,255,0.05)">
+
+<div class="bg-white/[.05] flex min-h-16 w-full cursor-pointer items-center rounded p-4 transition duration-100 hover:bg-white/[.08] hover:shadow-[0_0px_0px_1px_rgba(255,255,255,0.1)] active:bg-white/[.03]" @onclick="async () => {
+    // FIXME: Verify this if
+    autoStart = !autoStart;
+}">
     <div class="w-full">
         Enable Auto start on user login
     </div>
     <div class="flex w-full flex-row justify-end">
+        @String.Format(autoStart ? "On" : "Off")
         <FluentSwitch ValueChanged="@(async (v) => {
             var res = new UriBuilder(
                         new Uri($"http://127.0.0.1:{App.Instance.controlPort}/autostart")
@@ -70,8 +100,21 @@
         })" Value="autoStart"></FluentSwitch>
     </div>
 </div>
+<div class="h-1"></div>
 
-<Addons></Addons>
+<div class="bg-white/[.05] flex min-h-16 w-full cursor-pointer items-center rounded p-4 transition duration-100 hover:bg-white/[.08] hover:shadow-[0_0px_0px_1px_rgba(255,255,255,0.1)] active:bg-white/[.03]" @onclick="async () => {
+    // FIXME: Verify this if
+    enableDebug = !enableDebug;
+}">
+    <div class="w-full">
+        Enable Debug
+    </div>
+    <div class="flex w-full flex-row justify-end">
+        @String.Format(enableDebug ? "On" : "Off")
+        <FluentSwitch Value="enableDebug"></FluentSwitch>
+    </div>
+</div>
+<div class="h-1"></div>
 
 <div class="h-8"></div>
 <div style="
@@ -89,8 +132,13 @@
 
     private bool autoStart = false;
 
+    private bool enableDebug = false;
+    private bool testBool = false;
+
     public static Preferences Instance = null;
 
+    @* private async Task GetDebugInfo()
+    {    } *@
     private async Task GetStatus()
     {
         var res = new UriBuilder(
@@ -110,25 +158,46 @@
 
     protected RenderFragment Item(RenderFragment icon, string header, string caption, RenderFragment button)
     {
-        return @<div><div class="h-16 flex flex-row w-full bg-gray-800 rounded items-center">
-        <div class="w-6"></div>
-        <FluentIcon Value="@(new Icons.Regular.Size28.Settings())" Color="Color.Neutral"></FluentIcon>
+        return @<div><div class="bg-white/[.05] flex min-h-16 w-full flex-row items-center rounded">
         <div class="w-5"></div>
-        <div class="w-full flex flex-row">
-            <div class="w-full h-full items-center justify-start flex flex-col">
+        @icon
+        <div class="w-5"></div>
+        <div class="flex w-full flex-row">
+            <div class="flex h-full w-full flex-col items-center justify-start">
                 <div class="w-full font-normal">
                     @header
                 </div>
-                <div class="w-full font-light">
+                <div class="text-white/75 w-full text-xs font-light">
                     @caption
                 </div>
             </div>
-            <div class="w-full flex flex-row justify-end items-center">
+            <div class="flex w-full flex-row items-center justify-end">
                 @button
                 <div class="w-4"></div>
             </div>
         </div>
     </div>
-        <div class="h-4"></div></div>;
+        <div class="h-1"></div></div>;
     }
+
+// lul i dunno how one does these
+//
+//    protected RenderFragment Switch(string description, bool value, Action? action)
+//    {
+//        return @<div class="flex min-h-16 w-full cursor-pointer items-center rounded p-4" style="background-color: rgba(255,255,255,0.05)" @onclick="async () => {
+//            ToggleValue(value);
+//            StateHasChanged();
+//        }">
+//            <div class="w-full">
+//                @description
+//            </div>
+//            <div class="flex w-full flex-row justify-end">
+//                @String.Format(value ? "On" : "Off")
+//                <FluentSwitch ValueChanged="@(action ?? (() => {}))" Value="value"></FluentSwitch>
+//            </div>
+//        </div>
+//    ;
+//    }
+//
+//    protected bool ToggleValue(bool value) => !value;
 }
