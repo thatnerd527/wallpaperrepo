@@ -1,11 +1,12 @@
-﻿<div style="
-                font-size: 26px;
-                font-weight: 600;
+﻿<div class="h-8"></div>
+<div style="
+                font-size: 20px;
+                font-weight: 500;
                             ">
     Addons
 </div>
 <div class="h-8"></div>
-<div class="card flex flex-row items-center justify-center p-4">
+<div class="card flex flex-row items-center justify-center p-4 overflow-scroll">
     <FluentButton @onclick="@(async () => {
                     var req = App.Instance.controlPort;
                     var res = new UriBuilder(
@@ -60,6 +61,9 @@
     Running Addons
 </div>
 <div class="h-4"></div>
+<div class="card flex flex-row items-center" style="padding-left: 16px; overflow: overlay;">
+    There are currently no addons enabled
+</div>
 <FluentAccordion>
 
     @foreach (var item in Home.addonManifests)
@@ -67,12 +71,11 @@
         string itemid = item.ClientID;
         <FluentAccordionItem Heading="@(item.Name + " (" + item.ClientID + ")")" Style="
                         padding: 10px;
-                                                    ">
+                                                        ">
             <FluentIcon Value="@(new Icons.Regular.Size24.PuzzlePiece())" Color="@Color.Neutral" Slot="start" />
             <div slot="end">
-                <FluentButton IconEnd="@(new Icons.Regular.Size16.MoreHorizontal())" Id="@itemid"
-                              Title="Other settings"
-                              OnClick="@(() => {
+                <FluentButton IconEnd="@(new Icons.Regular.Size16.MoreHorizontal())" Id="@itemid" Title="Other settings"
+                    OnClick="@(() => {
                                                 menuOpen[itemid] = true;
                                           })" />
             </div>
@@ -97,11 +100,15 @@
                            }
                         })" VerticalThreshold="170">
                 <FluentMenuItem>
-                    <span slot="start"><FluentIcon Value="@(new Icons.Regular.Size20.Pause())" Color="Color.Neutral" Slot="start" /></span>
+                    <span slot="start">
+                        <FluentIcon Value="@(new Icons.Regular.Size20.Pause())" Color="Color.Neutral" Slot="start" />
+                    </span>
                     Disable
                 </FluentMenuItem>
                 <FluentMenuItem>
-                    <span slot="start"><FluentIcon Value="@(new Icons.Regular.Size20.UninstallApp())" Color="Color.Neutral" Slot="start" /></span>
+                    <span slot="start">
+                        <FluentIcon Value="@(new Icons.Regular.Size20.UninstallApp())" Color="Color.Neutral" Slot="start" />
+                    </span>
                     Uninstall
                 </FluentMenuItem>
             </FluentMenu>
@@ -118,6 +125,9 @@
     Disabled Addons
 </div>
 <div class="h-4"></div>
+<div class="card flex flex-row items-center" style="padding-left: 16px; overflow: overlay;">
+    You have no addons
+</div>
 <FluentAccordion>
 
     @foreach (var item in Home.disabledAddons)
@@ -125,12 +135,11 @@
         string itemid = item.ClientID;
         <FluentAccordionItem Heading="@(item.Name + " (" + item.ClientID + ")")" Style="
                         padding: 10px;
-                                                        ">
+                                                            ">
             <FluentIcon Value="@(new Icons.Regular.Size24.PuzzlePiece())" Color="@Color.Neutral" Slot="start" />
             <div slot="end">
-                <FluentButton IconEnd="@(new Icons.Regular.Size16.MoreHorizontal())" Id="@itemid"
-                              Title="Other settings"
-                              OnClick="@(() => {
+                <FluentButton IconEnd="@(new Icons.Regular.Size16.MoreHorizontal())" Id="@itemid" Title="Other settings"
+                    OnClick="@(() => {
                                                 menuOpen[itemid] = true;
                                           })" />
             </div>
@@ -155,11 +164,15 @@
                            }
                         })" VerticalThreshold="170">
                 <FluentMenuItem>
-                    <span slot="start"><FluentIcon Value="@(new Icons.Regular.Size20.Play())" Color="Color.Neutral" Slot="start" /></span>
+                    <span slot="start">
+                        <FluentIcon Value="@(new Icons.Regular.Size20.Play())" Color="Color.Neutral" Slot="start" />
+                    </span>
                     Enable
                 </FluentMenuItem>
                 <FluentMenuItem>
-                    <span slot="start"><FluentIcon Value="@(new Icons.Regular.Size20.UninstallApp())" Color="Color.Neutral" Slot="start" /></span>
+                    <span slot="start">
+                        <FluentIcon Value="@(new Icons.Regular.Size20.UninstallApp())" Color="Color.Neutral" Slot="start" />
+                    </span>
                     Uninstall
                 </FluentMenuItem>
             </FluentMenu>
@@ -188,8 +201,7 @@
         </div>
     </div>
 </div>
-<div class="card2 absolute left-0 top-0 h-full w-full flex-col items-center justify-center"
-     style="
+<div class="card2 absolute left-0 top-0 h-full w-full flex-col items-center justify-center" style="
         display: @(showConfirmDialog ? "flex" : "none");
     ">
     <div class="m-8 bg-neutral-700 p-8" style="
@@ -202,7 +214,8 @@
             Apply changes?
         </div>
         <div class="h-8"></div>
-        Pressing this button will apply all of the changes that you have defined in the add-ons panel and will also restart the program immediately after completing all the changes. Are you sure you want to continue?
+        Pressing this button will apply all of the changes that you have defined in the add-ons panel and will also
+        restart the program immediately after completing all the changes. Are you sure you want to continue?
         <div class="h-8"></div>
         <div class="flex w-full flex-row items-end justify-end">
             <FluentButton Appearance="Appearance.Stealth" @onclick="@(() => {showConfirmDialog=false;})">
@@ -217,8 +230,7 @@
         </div>
     </div>
 </div>
-<div class="card2 absolute left-0 top-0 h-full w-full flex-col items-center justify-center"
-     style="
+<div class="card2 absolute left-0 top-0 h-full w-full flex-col items-center justify-center" style="
         display: @(showErrorMessage ? "flex" : "none");
     ">
     <div class="m-8 bg-neutral-700 p-8" style="
@@ -282,7 +294,7 @@
                 Width = "500px",
                 PreventScroll = true
             };
-        var result = await DialogService.ShowDialogAsync<Dialog>(status,parameters);
+        var result = await DialogService.ShowDialogAsync<Dialog>(status, parameters);
         await result.Result;
     }
 
@@ -292,11 +304,11 @@
         var jsonRep = new Dictionary<string, string>();
         foreach (var item in pendingChanges)
         {
-            jsonRep.Add(item.Key, Enum.GetName(typeof(ChangeType),item.Value));
+            jsonRep.Add(item.Key, Enum.GetName(typeof(ChangeType), item.Value));
         }
         var res = new UriBuilder(
-    new Uri($"http://127.0.0.1:{App.Instance.controlPort}/addonchanges")
-    );
+        new Uri($"http://127.0.0.1:{App.Instance.controlPort}/addonchanges")
+        );
         res.Query = "?changes=" + JsonSerializer.Serialize(jsonRep);
         var request = await client.GetAsync(res.Uri);
         if (request.IsSuccessStatusCode)

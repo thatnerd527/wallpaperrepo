@@ -3,12 +3,13 @@
 @tailwind components;
 @tailwind utilities;
 
-.CustomClass {
-    transition: 0.3s;
+* {
+    user-select: none;
 }
 
-.CustomClass:hover {
-    background-color: #ff000026;
+:root {
+    --neutral-fill-stealth-rest: yellow;
+    --accent-base-color: red;
 }
 
 body {

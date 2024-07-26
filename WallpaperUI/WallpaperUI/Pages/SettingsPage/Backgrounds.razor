@@ -1,11 +1,21 @@
 ﻿@using System.Text.Json
+
+<FluentTooltip Anchor="infoTooltip" Position=TooltipPosition.End> These are the backgrounds from your installed addons.</FluentTooltip>
+
+<div class="h-8"></div>
 <div style="
                 font-size: 26px;
                 font-weight: 600;
                         ">
     Backgrounds
 </div>
-<div class="h-8"></div>
+
+<div class="h-4"></div>
+<div>Persistent ID: @Home.currentBackground</div>
+
+<!-- TODO: image carousel thingy here https://imgur.com/inEXZYt -->
+
+
 <div class="card flex flex-row items-center justify-center">
     <FluentButton @onclick="@(async() => {
                     var req = App.Instance.controlPort;
@@ -94,21 +104,13 @@
     </FluentButton>
 
 </div>
-<div class="h-8"></div>
-<div style="
-                font-size: 20px;
-                font-weight: 500;
-                                ">
-    Active Background
-</div>
-<div class="h-4"></div>
-<div>Persistent ID: @Home.currentBackground</div>
+
 <div class="h-8"></div>
 <div style="
                 font-size: 20px;
                 font-weight: 500;
                             ">
-    Available Backgrounds
+    Available Backgrounds <FluentIcon Id="infoTooltip"  Value="@(new Icons.Regular.Size16.Info())" />
 </div>
 <div class="h-4"></div>
 <FluentAccordion>
@@ -211,6 +213,8 @@
         <div class="h-8"></div>
         <div class="flex w-full flex-row items-end justify-end">
             <FluentButton Appearance="Appearance.Stealth" @onclick="@(async () => {
+                showEncodingDialog=false;
+                cancelEncoding = true;
                 if (!encodingError) {
                     var req = App.Instance.controlPort;
                     var res = new UriBuilder(
@@ -220,8 +224,7 @@
                     var result2 = await client.PostAsync(res.Uri, new StringContent(""));
                     var data2 = await result2.Content.ReadAsStringAsync();
                 }
-                showEncodingDialog=false;
-                cancelEncoding = true;
+                
                 StateHasChanged();
                
             })">
@@ -248,6 +251,8 @@
         <div class="h-8"></div>
         <div class="flex w-full flex-row items-center justify-center">
             <FluentButton Appearance="Appearance.Stealth" @onclick="@(async () => {
+                    showAskMediaTypeDialog = false;
+                    showEncodingDialog = true;
                     var req = App.Instance.controlPort;
                     var res = new UriBuilder(
                             new Uri("http://127.0.0.1:" + req + "/getencodingstatus")
@@ -293,6 +298,8 @@
             </FluentButton>
             <div class="min-h-20 w-4"></div>
             <FluentButton Appearance="Appearance.Stealth" @onclick="@(async () => {
+                    showAskMediaTypeDialog = false;
+                    showEncodingDialog = true;
                     var req = App.Instance.controlPort;
                     var res = new UriBuilder(
                             new Uri("http://127.0.0.1:" + req + "/getencodingstatus")
@@ -314,6 +321,7 @@
                     }
                     data2 = await result2.Content.ReadAsStringAsync();
                     var decoded2 = EncodingStatus.FromJsonElement(JsonSerializer.Deserialize<JsonElement>(data2)!);
+                   
                     switch (decoded2.Status) {
                         case "done":
                             App.Instance.preferencesManager.Remove("simplebackground");
@@ -340,6 +348,8 @@
         <div class="h-8"></div>
         <div class="flex w-full flex-row items-end justify-end">
             <FluentButton Appearance="Appearance.Stealth" @onclick="@(async () => {
+                    showAskMediaTypeDialog = false;
+                    showEncodingDialog = false;
                     var req = App.Instance.controlPort;
                     var res = new UriBuilder(
                             new Uri("http://127.0.0.1:" + req + "/getencodingstatus")
@@ -347,8 +357,7 @@
                     res.Query = "guid=" + encodingID + "&action=cancel";
                     var result2 = await client.PostAsync(res.Uri, new StringContent(""));
                     var data2 = await result2.Content.ReadAsStringAsync();
-                    showAskMediaTypeDialog = false;
-                    showEncodingDialog = false;
+                    
                     StateHasChanged();
             })">
                 Cancel
@@ -384,4 +393,7 @@
     {
         StateHasChanged();
     }
+
+    private void OnDismiss()
+    { }
 }

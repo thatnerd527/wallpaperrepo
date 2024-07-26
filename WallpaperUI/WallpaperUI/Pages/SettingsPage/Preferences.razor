@@ -1,4 +1,5 @@
-﻿<div style="
+﻿<div class="h-8"></div>
+<div style="
                 font-size: 26px;
                 font-weight: 600;
                         ">
@@ -12,6 +13,22 @@
     General
 </div>
 <div class="h-4"></div>
+@Item(
+    @<FluentIcon Value="@(new Icons.Regular.Size24.Settings())" Color="Color.Neutral"></FluentIcon>,
+    "Header",
+    "Caption",
+    @<FluentButton Appearance="Appearance.Neutral">
+        Button
+    </FluentButton>
+)
+@Item(
+    @<FluentIcon Value="@(new Icons.Regular.Size24.Settings())" Color="Color.Neutral"></FluentIcon>,
+    "Header",
+    "Caption",
+    @<FluentButton Appearance="Appearance.Neutral">
+        Button
+    </FluentButton>
+    )
 <div class="card flex flex-row items-center" style="padding-left: 16px; overflow: overlay;">
     <FluentButton Appearance="Appearance.Neutral" @onclick="@(() => {
                     JS.InvokeVoidAsync("remoterestart");
@@ -53,6 +70,18 @@
         })" Value="autoStart"></FluentSwitch>
     </div>
 </div>
+
+<Addons></Addons>
+
+<div class="h-8"></div>
+<div style="
+                font-size: 20px;
+                font-weight: 500;
+                            ">
+    Attributions
+    <!-- TODO: attributions section -->
+</div>
+
 @inject IHttpClientFactory hcf
 @inject IJSRuntime JS
 @code {
@@ -77,6 +106,29 @@
         Instance = this;
         client = hcf.CreateClient();
         await GetStatus();
-        
+    }
+
+    protected RenderFragment Item(RenderFragment icon, string header, string caption, RenderFragment button)
+    {
+        return @<div><div class="h-16 flex flex-row w-full bg-gray-800 rounded items-center">
+        <div class="w-6"></div>
+        <FluentIcon Value="@(new Icons.Regular.Size28.Settings())" Color="Color.Neutral"></FluentIcon>
+        <div class="w-5"></div>
+        <div class="w-full flex flex-row">
+            <div class="w-full h-full items-center justify-start flex flex-col">
+                <div class="w-full font-normal">
+                    @header
+                </div>
+                <div class="w-full font-light">
+                    @caption
+                </div>
+            </div>
+            <div class="w-full flex flex-row justify-end items-center">
+                @button
+                <div class="w-4"></div>
+            </div>
+        </div>
+    </div>
+        <div class="h-4"></div></div>;
     }
 }

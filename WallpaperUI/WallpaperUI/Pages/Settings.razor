@@ -6,23 +6,58 @@
     height: 100%;
 " class="duration flex flex-row">
     <FluentNavMenu Width="250">
-        <FluentNavLink Icon="@(new Icons.Regular.Size24.PuzzlePiece())" @onclick="@(() => {
-            screen = "addons";
-        })">Addons</FluentNavLink>
-        <FluentNavLink Icon="@(new Icons.Regular.Size24.Window())" @onclick="@(() => {
-            screen = "panels";
-        })">Panels</FluentNavLink>
-        <FluentNavLink Icon="@(new Icons.Regular.Size24.Wallpaper())" @onclick="@(() => {
-            screen = "backgrounds";
-        })">Backgrounds</FluentNavLink>
-        <FluentNavLink Icon="@(new Icons.Regular.Size24.Settings())" @onclick="@(() => {
-            screen = "preferences";
-        })">Preferences</FluentNavLink>
+        @* <FluentNavLink Icon="@(new Icons.Regular.Size24.PuzzlePiece())" @onclick="@(() => {
+        screen = "addons";
+        })">Addons</FluentNavLink> *@
+
+        <div class="my-4" style="
+                font-size: 20px;
+                font-weight: 500;
+            ">
+            <!-- TODO: svg here -->
+            WallpaperUI
+        </div>
+
+        <div @onclick="@(() => {
+                screen = "panels";
+            })"
+            class="mt-0.5 rounded text-ellipsis w-full h-8 hover:bg-gray-700 bg-gray-900 transition-colors duration-100 flex flex-row cursor-pointer items-center">
+            <div style="width: 9px;"></div>
+            <div class="h-full flex flex-col items-center justify-center">
+                <FluentIcon Value="@(new Icons.Regular.Size24.Window())" Style="width:20px;" />
+            </div>
+            <div style="width: 0.6rem"></div>
+            Widgets
+        </div>
+
+        <div @onclick="@(() => {
+                screen = "backgrounds";
+            })"
+            class="mt-0.5 rounded text-ellipsis w-full h-8 hover:bg-gray-700 bg-gray-900 transition-colors duration-100 flex flex-row cursor-pointer items-center">
+            <div style="width: 9px;"></div>
+            <div class="h-full flex flex-col items-center justify-center">
+                <FluentIcon Value="@(new Icons.Regular.Size24.Image())" Style="width:20px;" />
+            </div>
+            <div style="width: 0.6rem"></div>
+            Backgrounds
+        </div>
+
+        <div @onclick="@(() => {
+                screen = "preferences";
+            })"
+            class="mt-0.5 rounded text-ellipsis w-full h-8 hover:bg-gray-700 bg-gray-900 transition-colors duration-100 flex flex-row cursor-pointer items-center">
+            <div style="width: 9px;"></div>
+            <div class="h-full flex flex-col items-center justify-center">
+                <FluentIcon Value="@(new Icons.Regular.Size24.Settings())" Style="width:20px;" />
+            </div>
+            <div style="width: 0.6rem"></div>
+            Settings
+        </div>
     </FluentNavMenu>
 
     <div style="width: 24px;"></div>
-    <div class="h-full w-full CustomClass" style="
-        padding: 16px;
+    <div class="h-full w-full" style="
+        padding: 16px 12%;
         border-radius: 12px;
         background-color: #00000026;
         overflow: overlay;
@@ -38,16 +73,13 @@
         @if (screen == "backgrounds")
         {
             <Backgrounds></Backgrounds>
-
         }
         @if (screen == "preferences")
         {
             <Preferences></Preferences>
         }
 
-
     </div>
-
 </div>
 
 @code {
@@ -82,12 +114,12 @@
                 PrimaryAction = "OK",
                 PrimaryActionEnabled = true,
                 SecondaryActionEnabled = false,
-                
+
                 Width = "500px",
                 PreventScroll = true
             };
-        var result = await DialogService.ShowDialogAsync<Dialog>(status,parameters);
+        var result = await DialogService.ShowDialogAsync<Dialog>(status, parameters);
         await result.Result;
-        
+
     }
 }
