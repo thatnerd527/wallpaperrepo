@@ -5,8 +5,94 @@
                             ">
     Addons
 </div>
+<div class="h-4"></div>
+
+<div>
+    <div class="bg-white/[.05] flex min-h-16 w-full cursor-pointer items-center rounded transition duration-100 hover:bg-white/[.08] hover:shadow-[0_0px_0px_1px_rgba(255,255,255,0.1)] active:bg-white/[.03]">
+    <div class="w-5"></div>
+    <FluentIcon Value="@(new Icons.Regular.Size20.PuzzlePiece())" Color="@Color.Neutral" />
+    <div class="w-5"></div>
+        <div class="flex w-full flex-row">
+                <div class="flex h-full w-full flex-col items-center justify-start">
+                    <div class="w-full font-normal">
+                        Add-ons
+                    </div>
+                    <div class="text-white/75 w-full text-xs font-light">
+                        Installed addons
+                    </div>
+                </div>
+                <div class="flex w-full flex-row items-center justify-end">
+                    <FluentIcon Value="@(new Icons.Regular.Size20.ChevronUp())" Color="@Color.Neutral" />
+                    <div class="w-4"></div>
+                </div>
+        </div>
+    </div>
+</div>
+<div class="bg-white/[.05] flex min-h-16 w-full flex-row items-center rounded p-4 mt-[1px]">
+    <div class="w-full min-h-28">
+        There are no add-ons installed.
+    </div>
+    <div class="flex w-full flex-row justify-end"></div>
+</div>
+<div class="bg-white/[.05] flex min-h-16 w-full flex-row items-center rounded p-4 mt-[1px]">
+    <div class="w-full"></div>
+    <div class="flex w-full flex-row justify-end">
+        @* merge two buttons together *@
+        <FluentButton Appearance="Appearance.Neutral"> Install Add-on</FluentButton>
+    </div>
+</div>
+
+
+<div class="h-1"></div>
+<div>
+    <div class="bg-white/[.05] flex min-h-16 w-full cursor-pointer items-center rounded transition duration-100 hover:bg-white/[.08] hover:shadow-[0_0px_0px_1px_rgba(255,255,255,0.1)] active:bg-white/[.03]">
+    <div class="w-5"></div>
+    <FluentIcon Value="@(new Icons.Regular.Size20.PuzzlePiece())" Color="@Color.Neutral" />
+    <div class="w-5"></div>
+        <div class="flex w-full flex-row">
+                <div class="flex h-full w-full flex-col items-center justify-start">
+                    <div class="w-full font-normal">
+                        Disabled Add-ons
+                    </div>
+                    <div class="text-white/75 w-full text-xs font-light">
+                        A list of add-ons you disabled.
+                    </div>
+                </div>
+                <div class="flex w-full flex-row items-center justify-end">
+                    <FluentIcon Value="@(new Icons.Regular.Size20.ChevronUp())" Color="@Color.Neutral" />
+                    <div class="w-4"></div>
+                </div>
+        </div>
+    </div>
+</div>
+<div class="bg-white/[.05] flex min-h-16 w-full flex-row items-center rounded p-4 mt-[1px]">
+    <div class="w-full min-h-28">
+        There are no disabled add-ons.
+    </div>
+    <div class="flex w-full flex-row justify-end"></div>
+</div>
+<div class="bg-white/[.05] flex min-h-16 w-full flex-row items-center rounded p-4 mt-[1px]">
+    <div class="w-full"></div>
+    <div class="flex w-full flex-row justify-end">
+        <FluentButton Appearance="Appearance.Neutral"> Enable All </FluentButton>
+    </div>
+</div>
+
 <div class="h-8"></div>
-<div class="card flex flex-row items-center justify-center p-4 overflow-scroll">
+<div class="h-8"></div>
+
+<div style="
+                font-size: 20px;
+                font-weight: 500;
+                            ">
+    Addons (old)
+</div>
+
+@* OLD *@
+<div class="border-2 border-red-500">
+    <div class="h-8"></div>
+
+    <div class="card flex flex-row items-center justify-center overflow-scroll p-4">
     <FluentButton @onclick="@(async () => {
                     var req = App.Instance.controlPort;
                     var res = new UriBuilder(
@@ -51,20 +137,20 @@
         <FluentIcon Value="@(new Icons.Regular.Size20.ArrowDownload())" Slot="start" Color="Color.Neutral"></FluentIcon>
         Install addon (folder)
     </FluentButton>
-</div>
-<div class="h-8"></div>
+    </div>
+    <div class="h-8"></div>
 
-<div style="
+    <div style="
                 font-size: 20px;
                 font-weight: 500;
                                 ">
     Running Addons
-</div>
-<div class="h-4"></div>
-<div class="card flex flex-row items-center" style="padding-left: 16px; overflow: overlay;">
+    </div>
+    <div class="h-4"></div>
+    <div class="card flex flex-row items-center" style="padding-left: 16px; overflow: overlay;">
     There are currently no addons enabled
-</div>
-<FluentAccordion>
+    </div>
+    <FluentAccordion>
 
     @foreach (var item in Home.addonManifests)
     {
@@ -115,20 +201,20 @@
         </FluentAccordionItem>
     }
 
-</FluentAccordion>
+    </FluentAccordion>
 
-<div class="h-4"></div>
-<div style="
+    <div class="h-4"></div>
+    <div style="
                 font-size: 20px;
                 font-weight: 500;
                                 ">
     Disabled Addons
-</div>
-<div class="h-4"></div>
-<div class="card flex flex-row items-center" style="padding-left: 16px; overflow: overlay;">
+    </div>
+    <div class="h-4"></div>
+    <div class="card flex flex-row items-center" style="padding-left: 16px; overflow: overlay;">
     You have no addons
-</div>
-<FluentAccordion>
+    </div>
+    <FluentAccordion>
 
     @foreach (var item in Home.disabledAddons)
     {
@@ -179,9 +265,9 @@
         </FluentAccordionItem>
     }
 
-</FluentAccordion>
-<div class="h-4"></div>
-<div class="absolute bottom-0 left-0 flex w-full p-4" style="
+    </FluentAccordion>
+    <div class="h-4"></div>
+    <div class="absolute bottom-0 left-0 flex w-full p-4" style="
     display: @(pendingChanges.Count > 0 ? "flex" : "none");
 ">
     <div class="left-0 flex min-h-14 w-full flex-row items-center p-4" style="
@@ -200,8 +286,8 @@
             </FluentButton>
         </div>
     </div>
-</div>
-<div class="card2 absolute left-0 top-0 h-full w-full flex-col items-center justify-center" style="
+    </div>
+    <div class="card2 absolute left-0 top-0 h-full w-full flex-col items-center justify-center" style="
         display: @(showConfirmDialog ? "flex" : "none");
     ">
     <div class="m-8 bg-neutral-700 p-8" style="
@@ -229,8 +315,8 @@
             </FluentButton>
         </div>
     </div>
-</div>
-<div class="card2 absolute left-0 top-0 h-full w-full flex-col items-center justify-center" style="
+    </div>
+    <div class="card2 absolute left-0 top-0 h-full w-full flex-col items-center justify-center" style="
         display: @(showErrorMessage ? "flex" : "none");
     ">
     <div class="m-8 bg-neutral-700 p-8" style="
@@ -248,6 +334,7 @@
                 Close
             </FluentButton>
         </div>
+    </div>
     </div>
 </div>
 
