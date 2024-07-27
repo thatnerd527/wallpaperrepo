@@ -14,7 +14,7 @@ body {
     line-height: var(--type-ramp-base-line-height);
     margin: 0;
     /* FIXME: remove this, since we'll make it transparent */
-    background-color: rgb(0, 0, 0);
+    /* background-color: black; */
 }
 
 .navmenu-icon {

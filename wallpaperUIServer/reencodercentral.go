@@ -1,6 +1,7 @@
 package main
 
 import (
+	"net/http"
 	"os"
 	"os/exec"
 	"path"
@@ -9,6 +10,45 @@ import (
 )
 
 var encodertochan = make(map[string]chan string)
+
+type RecentBackground struct {
+	CachedPath string `json:"cachedpath"`
+	LoaderBackgroundID string `json:"loaderbackgroundid"`
+}
+
+func previewFileHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Access-Control-Allow-Origin", "*")
+	if r.Method == "GET" {
+		filename := r.URL.Query().Get("filename")
+		http.ServeFile(w, r, path.Join("result", filename))
+	}
+}
+
+func addRecentMediaBackground(backgroundid string, filename string, loaderbackgroundid string) {
+	pref := cachedpreferences
+	if _ , ok := pref["recentbackgrounds"]; !ok {
+		pref["recentbackgrounds"] = make(map[string]map[string]string)
+	}
+	pref["recentbackgrounds"].(map[string]interface{})[backgroundid] = map[string]string{
+		"filename":filename,
+		"loaderbackgroundid":loaderbackgroundid,
+	}
+	cachedpreferences = pref
+	preferenceschannel.SendMessage(PreferenceUpdate{cachedpreferences, GenerateGUID(), false})
+}
+
+func removeRecentMediaBackground(backgroundid string) {
+	pref := cachedpreferences
+	if _ , ok := pref["recentbackgrounds"]; !ok {
+		return
+	}
+	delete(pref["recentbackgrounds"].(map[string]interface{}), backgroundid)
+	cachedpreferences = pref
+	preferenceschannel.SendMessage(PreferenceUpdate{cachedpreferences, GenerateGUID(), false})
+}
+
+
+
 
 func reencodeVideoFile(inputfile string, outputfile string, codec string, quality string, stripAudio bool, controlchannel chan string) {
 	// This function is used to reencode video files with ffmpeg
@@ -39,6 +79,7 @@ func reencodeVideoFile(inputfile string, outputfile string, codec string, qualit
 	process.Stdout = os.Stdout
 	process.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 	err := process.Run()
+	addRecentMediaBackground(GenerateGUID(), filepath.Base(outputfile), "")
 	if err != nil {
 		controlchannel <- "error," + err.Error()
 	} else {
@@ -66,6 +107,7 @@ func reencodeImageFile(inputfile string, outputfile string, controlchannel chan 
 	process.Stdout = os.Stdout
 	process.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 	err := process.Run()
+	addRecentMediaBackground(GenerateGUID(), filepath.Base(outputfile), "")
 	if err != nil {
 		controlchannel <- "error," + err.Error()
 	} else {
@@ -75,10 +117,10 @@ func reencodeImageFile(inputfile string, outputfile string, controlchannel chan 
 
 }
 
-func startReencodingSub(inputfile string, controlchannel chan string, specifictype string) (string, error) {
+func startReencodingSub(inputfile string, filename string, controlchannel chan string, specifictype string) (string, error) {
 	switch specifictype {
 		case "Video":
-			outpath, err := filepath.Abs(path.Join("result", "reencoded.webm"))
+			outpath, err := filepath.Abs(path.Join("result",filename + ".webm"))
 			if err != nil {
 				return "", err
 			}
@@ -87,7 +129,7 @@ func startReencodingSub(inputfile string, controlchannel chan string, specificty
 			}()
 			return outpath, nil
 		case "Image":
-			outpath, err := filepath.Abs(path.Join("result", "reencoded.png"))
+			outpath, err := filepath.Abs(path.Join("result",filename + ".png"))
 			if err != nil {
 				return "", err
 			}
@@ -102,7 +144,7 @@ func startReencodingSub(inputfile string, controlchannel chan string, specificty
 				if (specifiedtype == "cancel") {
 					return
 				}
-				outpath, error := startReencodingSub(inputfile, controlchannel, specifiedtype)
+				outpath, error := startReencodingSub(inputfile,filename, controlchannel, specifiedtype)
 				if error != nil {
 					controlchannel <- "error," + error.Error()
 				} else {
@@ -113,10 +155,10 @@ func startReencodingSub(inputfile string, controlchannel chan string, specificty
 	}
 }
 
-func startReencoding(inputfile string, controlchannel chan string) (string, error) {
+func startReencoding(inputfile string, controlchannel chan string, filename string) (string, error) {
 	filetype := FileNameToMediaType(inputfile)
 	if _, ok := os.Stat("result"); os.IsNotExist(ok) {
 		os.Mkdir("result", 0755)
 	}
-	return startReencodingSub(inputfile, controlchannel, filetype)
+	return startReencodingSub(inputfile, filename, controlchannel, filetype)
 }

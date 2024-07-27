@@ -5,6 +5,31 @@ let preferencessystem = null;
 let controlPort = new URL(window.location.href).searchParams.get("controlPort");
 let mode = new URL(window.location.href).searchParams.get("mode");
 
+window.testanimation = function () {
+    let contentdiv = document.getElementById("contentdiv");
+    let expanderdiv = document.getElementById("expander");
+
+    contentdiv.classList.remove("max-h-0")
+    contentdiv.classList.add("max-h-max")
+    contentdiv.style.maxHeight = "0px";
+    console.log("Started.")
+    requestAnimationFrame(() => {
+        let height = contentdiv.getBoundingClientRect().height;
+        contentdiv.classList.add("max-h-0");
+        contentdiv.classList.remove("max-h-max");
+        contentdiv.classList.add("opacity-0");
+
+        requestAnimationFrame(() => {
+            contentdiv.classList.remove("max-h-0");
+            contentdiv.classList.remove("opacity-0");
+            contentdiv.style.maxHeight = height + "px";
+            contentdiv.classList.add("opacity-100");
+        });
+    });
+}
+
+console.log("Registered hooks")
+
 window.mode = function () {
     let mode = new URL(window.location.href).searchParams.get("mode");
     if (mode == null) {

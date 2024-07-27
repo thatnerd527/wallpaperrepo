@@ -3,6 +3,31 @@ using System.Text.Json.Serialization;
 
 namespace WallpaperUI.Cs
 {
+
+    public class RecentBackground
+    {
+        public string Filename { get; set; }
+
+        public string LoaderBackgroundID { get; set; }
+
+        public static RecentBackground FromDictionary(Dictionary<string,dynamic> data)
+        {
+            return new RecentBackground {
+                Filename = data["filename"],
+                LoaderBackgroundID = data["loaderbackgroundid"]
+            };
+        }
+
+        public static RecentBackground FromJsonElement(JsonElement element)
+        {
+            return new RecentBackground
+            {
+                Filename = element.GetProperty("filename").GetString()!,
+                LoaderBackgroundID = element.GetProperty("loaderbackgroundid").GetString()!
+            };
+        }
+    }
+
     public class SimpleBackgroundResponse
     {
         public string EncodingGUID { get; set; }

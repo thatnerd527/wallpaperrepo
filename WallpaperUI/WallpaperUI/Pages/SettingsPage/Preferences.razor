@@ -20,7 +20,7 @@
     @<FluentButton Appearance="Appearance.Neutral" @onclick="@(() => 
         {
             JS.InvokeVoidAsync("remoterestart");
-        })"> Proceed </FluentButton>
+        })"> Restart now </FluentButton>
 )
 @Item(
     @<FluentIcon Value="@(new Icons.Regular.Size24.Dismiss())" Color="Color.Neutral"></FluentIcon>,
@@ -30,7 +30,7 @@
         {
             // TODO: Perhaps add a single-use modal that users needs to restart the app manually
             JS.InvokeVoidAsync("remoteexit");
-        })"> Proceed </FluentButton>
+        })"> Exit now </FluentButton>
     )
 @Item(
     @<FluentIcon Value="@(new Icons.Regular.Size24.ArrowReset())" Color="Color.Neutral"></FluentIcon>,
@@ -39,7 +39,7 @@
     @<FluentButton Appearance="Appearance.Accent" @onclick="@(() => 
         {
             App.Instance.preferencesManager.Clear();
-        })"> Proceed </FluentButton>
+        })"> Reset settings </FluentButton>
     )
 
 @* <div class="card flex flex-row items-center" style="padding-left: 16px; overflow: overlay;">

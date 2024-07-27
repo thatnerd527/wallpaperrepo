@@ -28,18 +28,6 @@
         </div>
 
         <div @onclick="@(() => {
-                screen = "panels";
-            })"
-            class="mt-0.5 rounded text-ellipsis w-full h-8 hover:bg-gray-700 bg-gray-900 transition-colors duration-100 flex flex-row cursor-pointer items-center">
-            <div style="width: 9px;"></div>
-            <div class="flex h-full flex-col items-center justify-center">
-                <FluentIcon Value="@(new Icons.Regular.Size24.Window())" Color="@Color.Neutral" Style="width:20px;" />
-            </div>
-            <div style="width: 0.6rem"></div>
-            Widgets
-        </div>
-
-        <div @onclick="@(() => {
                 screen = "backgrounds";
             })"
             class="mt-0.5 rounded text-ellipsis w-full h-8 hover:bg-gray-700 bg-gray-900 transition-colors duration-100 flex flex-row cursor-pointer items-center">
@@ -49,6 +37,18 @@
             </div>
             <div style="width: 0.6rem"></div>
             Backgrounds
+        </div>
+
+        <div @onclick="@(() => {
+                screen = "panels";
+            })"
+            class="mt-0.5 rounded text-ellipsis w-full h-8 hover:bg-gray-700 bg-gray-900 transition-colors duration-100 flex flex-row cursor-pointer items-center">
+            <div style="width: 9px;"></div>
+            <div class="flex h-full flex-col items-center justify-center">
+                <FluentIcon Value="@(new Icons.Regular.Size24.Window())" Color="@Color.Neutral" Style="width:20px;" />
+            </div>
+            <div style="width: 0.6rem"></div>
+            Widgets
         </div>
 
         <div @onclick="@(() => {

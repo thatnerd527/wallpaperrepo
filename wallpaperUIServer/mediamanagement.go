@@ -43,6 +43,7 @@ func simpleBackgroundHandler(w http.ResponseWriter, r *http.Request) {
 		w.Header().Add("Access-Control-Allow-Origin", "*")
 	} else if (r.Method == "POST") {
 		w.Header().Add("Access-Control-Allow-Origin", "*")
+		filename := r.URL.Query().Get("resultfilename")
 		zipPath2, err := dialog.File().Title("Select simple background file").
 		Filter("Image files", "jpg", "jpeg", "png", "avif", "webp", "gif").
 		Filter("Video Files", "mp4","webm","mov","avi","mkv","flv","wmv","mpg","mpeg","m4v","3gp","3g2").
@@ -66,7 +67,7 @@ func simpleBackgroundHandler(w http.ResponseWriter, r *http.Request) {
 
 		encodingguid := GenerateGUID()
 		encodertochan[encodingguid] = make(chan string)
-		resultfile, err := startReencoding(zipPath2, encodertochan[encodingguid])
+		resultfile, err := startReencoding(zipPath2, encodertochan[encodingguid], filename)
 		if err != nil {
 			log.Println(err)
 			tmp := make(map[string]string)
@@ -94,15 +95,6 @@ func simpleBackgroundHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		w.Write(data)
 		return;
-
-		cachedpreferences["simplebackground"] = zipPath2
-		message, err := json.Marshal(cachedpreferences)
-		if err != nil {
-			log.Println(err)
-			return
-		}
-		os.WriteFile("preferences.json", message, 0644)
-		preferenceschannel.SendMessage(PreferenceUpdate{cachedpreferences, GenerateGUID(), false})
 	}
 }
 

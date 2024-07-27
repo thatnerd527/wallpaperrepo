@@ -41,7 +41,7 @@
         {
             controlPort = App.Instance.controlPort;
         }
-        var pref = App.Instance.preferencesManager.GetOrDefault("simplebackground", false);
+        dynamic pref = App.Instance.preferencesManager.GetOrDefault2("simplebackground", false);
         
         if (pref is bool && !pref)
         {

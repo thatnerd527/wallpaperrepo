@@ -218,7 +218,8 @@ left: 0px;
 
     private RenderFragment RenderBackgroundInternals()
     {
-        if (App.Instance.preferencesManager.GetOrDefault("simplebackground", false) is bool && !(bool)App.Instance.preferencesManager.GetOrDefault("simplebackground", false))
+        dynamic data = App.Instance.preferencesManager.GetOrDefault2("simplebackground", false);
+        if (data is bool && !data)
         {
             return@<Background runtimeCustomBackground="@backgrounds.FirstOrDefault(x => x.PersistentBackgroundID == currentBackground)" saveAction="() => {
                             App.SavePanelData(panels);

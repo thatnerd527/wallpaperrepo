@@ -10,6 +10,139 @@
     Backgrounds
 </div>
 
+<div class="w-[150px] h-[120px] border-8 border-black">
+    @*Preview*@
+</div>
+
+<div class="h-4"></div>
+
+<div id="expander" class="@(recentBackgroundsOpen ? "bg-white/[.08]" : "bg-white/[.05]") @("hover:bg-white/[.08]") @(recentBackgroundsOpen ? "active:bg-white/[.09]" : "active:bg-white/[.05]") @(recentBackgroundsOpen ? "rounded-t-lg" : "rounded") mb-[2px] flex h-14 w-full flex-row rounded-t-lg p-3.5 text-base transition duration-100 hover:shadow-[0_0px_0px_1px_rgba(255,255,255,0.1)]"
+     @onclick="@(async () => {
+        recentBackgroundsOpen = !recentBackgroundsOpen;
+        //await JS.InvokeVoidAsync("testanimation");
+    })">
+    <div class="flex h-full w-full flex-col justify-center">
+        Recent backgrounds
+    </div>
+    <div class="flex flex-col items-end justify-center pr-2">
+        <div class="@(recentBackgroundsOpen ? "rotate-0" : "rotate-180") transition-all duration-150 ease-in-out">
+            <FluentIcon Value="@(new Icons.Regular.Size20.ChevronUp())" Color="@Color.Neutral" />
+        </div>
+    </div>
+</div>
+<div id="contentdiv" class="@(recentBackgroundsOpen ? "opacity-100 duration-200 max-h-max" : "max-h-0 opacity-0 delay-0 duration-0") w-full overflow-visible transition-cardexpand ease-in-out">
+    <div class="bg-white/[.08] mb-[2px] flex h-max min-h-8 w-full flex-row flex-wrap gap-2 p-4" >
+        <div class="hover:bg-white/[.08] active:bg-white/[.05] transition-all duration-150 ease-in-out cursor-pointer border-2 flex h-24 w-24 flex-col items-center justify-center rounded border-white" @onclick="@(async () => {
+        var req = App.Instance.controlPort;
+                    var res = new UriBuilder(
+                        new Uri("http://127.0.0.1:" + req + "/simplebackground")
+                    );
+                    res.Query = "resultfilename=" + Guid.NewGuid().ToString();
+                    var result = await client.PostAsync(res.Uri, null);
+                    var data = await result.Content.ReadAsStringAsync();
+
+                    var decoded = SimpleBackgroundResponse.FromJsonElement(JsonSerializer.Deserialize<JsonElement>(data)!);
+                    switch (decoded.Status) {
+                        case "cancelled":
+                            return;
+                        case "errorprestart":
+                            encodingErrorInPrestart = true;
+                            encodingError = true;
+                            error = decoded.Error;
+                            showEncodingDialog = true;
+                            break;
+                        case "encoding":
+                        cancelEncoding = false;
+                            resultFile = decoded.ResultFile;
+                            encodingID = decoded.EncodingGUID;
+                            encodingError = false;
+                            encodingErrorInPrestart = false;
+                            showEncodingDialog = true;
+                            break;
+                    }
+                    res = new UriBuilder(
+                        new Uri("http://127.0.0.1:" + req + "/getencodingstatus")
+                    );
+                    res.Query = "guid=" + encodingID;
+                    StateHasChanged();
+                    HttpResponseMessage? result2 = null;
+                    while (result2 == null) {
+                        try {
+                            result2 = await client.GetAsync(res.Uri);
+                        } catch (Exception) {
+                            await Task.Delay(1000);
+                            continue;
+                        }
+                    }
+                    var data2 = await result2.Content.ReadAsStringAsync();
+                    var decoded2 = EncodingStatus.FromJsonElement(JsonSerializer.Deserialize<JsonElement>(data2)!);
+                    switch (decoded2.Status) {
+                        case "askuser":
+                            showAskMediaTypeDialog = true;
+                            showEncodingDialog = false;
+                            break;
+                        case "done":
+                            App.Instance.preferencesManager.Remove("simplebackground");
+                            App.Instance.preferencesManager.Set("simplebackground", resultFile);
+                            showEncodingDialog = false;
+                            break;
+                        default:
+                            if (cancelEncoding) {
+                                cancelEncoding = false;
+                                return;
+                            }
+                            encodingError  = true;
+                            error = decoded2.Status;
+                            showEncodingDialog = true;
+                            encodingErrorInPrestart = false;
+                            break;
+                    }
+                    StateHasChanged();
+    })">
+            <FluentIcon Value="@(new Icons.Regular.Size24.Add())" Color="@Color.Neutral" />
+        </div>
+        @foreach (var bkg in recentBackgrounds())
+        {
+            var guid = Guid.NewGuid().ToString();
+            <div class="hover:bg-white/[.08] active:bg-white/[.05] transition-all duration-150 ease-in-out cursor-pointer flex h-24 w-24 flex-col items-center justify-center rounded overflow-hidden border-transparent border-2 hover:border-white" @onclick="@(async () => {
+
+            })">
+                @if (bkg.Value.Filename.EndsWith(".png"))
+                {
+                    <img src="http://127.0.0.1:@(App.Instance.controlPort)/getpreviewfile?filename=@(bkg.Value.Filename)" class="w-full h-full object-cover rounded" />
+                } else if (bkg.Value.Filename.EndsWith(".webm"))
+                {
+                    <div class="h-full w-full">
+                            <video style="
+                                                object-fit: cover;
+                                            " id="@guid" class="pointer-events-none h-full w-full rounded">
+                            <source src="http://127.0.0.1:@(App.Instance.controlPort)/getpreviewfile?filename=@(bkg.Value.Filename)" type="video/webm" />
+                            </video>
+                            <script id="@(guid + "_helper")">
+                            var video = document.getElementById(document.currentScript.id.replaceAll("_helper",""))
+                                video.muted = true;
+                                video.loop = true;
+                                video.play();
+                                console.log(video)
+                            </script>
+                        </div>;
+                }
+            </div>
+        }
+    </div>
+    <div class="bg-white/[.08] mb-[2px] h-12 w-full p-3.5 text-base" style="font-weight: 400; display: flex; flex-direction: row; gap: 10px; align-items: center;">
+        From addons
+    </div>
+    <div class="bg-white/[.08] mb-[2px] flex h-max min-h-8 w-full flex-row flex-wrap gap-2 rounded-b-lg p-4">
+        <div class="border-2 flex h-24 w-24 flex-col items-center justify-center rounded border-white">
+            <FluentIcon Value="@(new Icons.Regular.Size24.Add())" Color="@Color.Neutral" />
+        </div>
+    </div>
+</div>
+
+
+@* OLD *@
+
 <div class="h-4"></div>
 <div>Persistent ID: @Home.currentBackground</div>
 
@@ -106,7 +239,7 @@
 
 <div class="h-8"></div>
 <div style="font-size: 20px; font-weight: 500; display: flex; flex-direction: row; gap: 10px; align-items: center;">
-    Available Backgrounds <FluentIcon Id="infoTooltip"  Value="@(new Icons.Regular.Size16.Info())" />
+    Available Backgrounds <FluentIcon Id="infoTooltip" Value="@(new Icons.Regular.Size16.Info())" />
 </div>
 <div class="h-4"></div>
 <FluentAccordion>
@@ -115,7 +248,7 @@
     {
         <FluentAccordionItem Heading="@item.LoaderBackgroundID" Style="
                         padding: 10px;
-                                        ">
+                                            ">
             <FluentIcon Value="@(new Icons.Regular.Size24.Wallpaper())" Color="@Color.Neutral" Slot="start" />
 
             <div>Background ID: @item.LoaderBackgroundID</div>
@@ -126,7 +259,7 @@
             <div class="h-4"></div>
             <div class="card flex flex-row items-center" style="padding-left: 16px; overflow: overlay;">
                 <div style="min-width: max-content" class="flex flex-row">
-                        <FluentButton Appearance="Appearance.Neutral" @onclick="@(async () => {
+                    <FluentButton Appearance="Appearance.Neutral" @onclick="@(async () => {
                                     var req = App.Instance.controlPort;
                                     var res = new UriBuilder(
                                         new Uri("http://127.0.0.1:" + req + "/simplebackground?delete=true")
@@ -158,7 +291,7 @@
     {
         <FluentAccordionItem Heading="@item.LoaderBackgroundID" Style="
                         padding: 10px;
-                                                ">
+                                                    ">
             <FluentIcon Value="@(new Icons.Regular.Size24.Wallpaper())" Color="@Color.Neutral" Slot="start" />
 
             <div>Background ID: @item.LoaderBackgroundID</div>
@@ -220,9 +353,9 @@
                     var result2 = await client.PostAsync(res.Uri, new StringContent(""));
                     var data2 = await result2.Content.ReadAsStringAsync();
                 }
-                
+
                 StateHasChanged();
-               
+
             })">
                 Cancel
             </FluentButton>
@@ -243,7 +376,7 @@
             Specify media type
         </div>
         <div class="h-8"></div>
-        The files media type seems to be unidentifiable by the system. Please select the media type below. 
+        The files media type seems to be unidentifiable by the system. Please select the media type below.
         <div class="h-8"></div>
         <div class="flex w-full flex-row items-center justify-center">
             <FluentButton Appearance="Appearance.Stealth" @onclick="@(async () => {
@@ -317,7 +450,7 @@
                     }
                     data2 = await result2.Content.ReadAsStringAsync();
                     var decoded2 = EncodingStatus.FromJsonElement(JsonSerializer.Deserialize<JsonElement>(data2)!);
-                   
+
                     switch (decoded2.Status) {
                         case "done":
                             App.Instance.preferencesManager.Remove("simplebackground");
@@ -337,7 +470,7 @@
                     }
                     StateHasChanged();
             })" Class="w-full h-full min-h-20" Style="height: 100%;">
-            <FluentIcon Value="@(new Icons.Regular.Size20.Image())" Slot="start" Color="Color.Neutral"></FluentIcon>
+                <FluentIcon Value="@(new Icons.Regular.Size20.Image())" Slot="start" Color="Color.Neutral"></FluentIcon>
                 Image
             </FluentButton>
         </div>
@@ -353,7 +486,7 @@
                     res.Query = "guid=" + encodingID + "&action=cancel";
                     var result2 = await client.PostAsync(res.Uri, new StringContent(""));
                     var data2 = await result2.Content.ReadAsStringAsync();
-                    
+
                     StateHasChanged();
             })">
                 Cancel
@@ -362,6 +495,8 @@
         </div>
     </div>
 </div>
+
+
 
 @inject IHttpClientFactory hcf
 @inject IDialogService DialogService
@@ -377,6 +512,21 @@
     private bool encodingError = false;
     private bool cancelEncoding = false;
     private bool encodingErrorInPrestart = false;
+    private bool recentBackgroundsOpen = false;
+
+    private Dictionary<string,RecentBackground> recentBackgrounds()
+    {
+        if (App.Instance.preferencesManager.GetPreferences().TryGetValue("recentbackgrounds", out var bkgs))
+        {
+            JsonElement elem = bkgs;
+            return elem.EnumerateObject()
+            .Select(x => new KeyValuePair<string, RecentBackground>(x.Name,RecentBackground.FromJsonElement(x.Value)))
+            .ToDictionary(x => x.Key, x => x.Value);
+        } else
+        {
+            return [];
+        }
+    }
 
     protected override void OnInitialized()
     {

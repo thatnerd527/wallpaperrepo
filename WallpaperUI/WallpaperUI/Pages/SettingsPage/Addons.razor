@@ -7,76 +7,166 @@
 </div>
 <div class="h-4"></div>
 
-<div>
-    <div class="bg-white/[.05] flex min-h-16 w-full cursor-pointer items-center rounded transition duration-100 hover:bg-white/[.08] hover:shadow-[0_0px_0px_1px_rgba(255,255,255,0.1)] active:bg-white/[.03]">
-    <div class="w-5"></div>
-    <FluentIcon Value="@(new Icons.Regular.Size20.PuzzlePiece())" Color="@Color.Neutral" />
-    <div class="w-5"></div>
+
+
+
+
+<div class="mt-[1px]">
+    <div class="bg-white/[.05] flex min-h-16 w-full cursor-pointer items-center rounded transition duration-100 hover:bg-white/[.08] hover:shadow-[0_0px_0px_1px_rgba(255,255,255,0.1)] active:bg-white/[.03]" @onclick="() => {enabledAddonsOpenAccordion = !enabledAddonsOpenAccordion;}">
+        <div class="w-5"></div>
+        <FluentIcon Value="@(new Icons.Regular.Size20.PuzzlePiece())" Color="@Color.Neutral" />
+        <div class="w-5"></div>
         <div class="flex w-full flex-row">
-                <div class="flex h-full w-full flex-col items-center justify-start">
-                    <div class="w-full font-normal">
-                        Add-ons
-                    </div>
-                    <div class="text-white/75 w-full text-xs font-light">
-                        Installed addons
-                    </div>
+            <div class="flex h-full w-full flex-col items-center justify-start">
+                <div class="w-full font-normal">
+                    Add-ons
                 </div>
-                <div class="flex w-full flex-row items-center justify-end">
+                <div class="text-white/75 w-full text-xs font-light">
+                    Installed addons
+                </div>
+            </div>
+            <div class="flex w-full flex-row items-center justify-end">
+                <div class="@(enabledAddonsOpenAccordion ? "rotate-0" : "rotate-180") transition-all duration-150 ease-in-out">
                     <FluentIcon Value="@(new Icons.Regular.Size20.ChevronUp())" Color="@Color.Neutral" />
-                    <div class="w-4"></div>
                 </div>
+
+                <div class="w-4"></div>
+            </div>
         </div>
     </div>
 </div>
-<div class="bg-white/[.05] flex min-h-16 w-full flex-row items-center rounded p-4 mt-[1px]">
-    <div class="w-full min-h-28">
-        There are no add-ons installed.
+<div class="transition-[height] @(enabledAddonsOpenAccordion ? "h-fit" : "h-[0px]") w-full overflow-hidden transition-all duration-150">
+    <div class="bg-white/[.05] mt-[1px] flex min-h-16 w-full flex-col items-start rounded p-2">
+        @if (Home.addonManifests.Count == 0)
+        {
+            <div class="m-2 min-h-28 w-full">
+                There are no add-ons installed.
+            </div>
+        }
+        else
+        {
+
+            @foreach (var item in Home.addonManifests)
+            {
+                @AddonItem(
+            @<div>
+                <div>
+                    @item.Description, Version: @item.Version
+                </div>
+                <div>
+                    Created by: @item.Author
+                </div>
+
+            </div>
+                         ,
+            @<div class="flex w-full flex-row items-end justify-end">
+                <FluentButton Appearance="Appearance.Neutral" @onclick="() => AddOrRemoveFromDisable(item)">
+                    @GetDisableButtonText(item)
+                </FluentButton>
+                <div class="w-4"></div>
+                <FluentButton Appearance="Appearance.Neutral" @onclick="() => AddOrRemoveFromUninstall(item)">
+                    @GetUninstallButtonText(item)
+                </FluentButton>
+            </div>, selectedEnabledAddon == item.ClientID, item, () =>
+                {
+                     selectedEnabledAddon = item.ClientID;
+                })
+            }
+
+        }
+
+        <div class="flex w-full flex-row justify-end"></div>
     </div>
-    <div class="flex w-full flex-row justify-end"></div>
-</div>
-<div class="bg-white/[.05] flex min-h-16 w-full flex-row items-center rounded p-4 mt-[1px]">
-    <div class="w-full"></div>
-    <div class="flex w-full flex-row justify-end">
-        @* merge two buttons together *@
-        <FluentButton Appearance="Appearance.Neutral"> Install Add-on</FluentButton>
+    <div class="bg-white/[.05] mt-[1px] flex min-h-16 w-full flex-row items-center rounded p-4">
+        <div class="w-full"></div>
+        <div class="flex w-full flex-row justify-end">
+            @* merge two buttons together *@
+            <FluentButton Appearance="Appearance.Neutral"> Install Add-on</FluentButton>
+        </div>
     </div>
 </div>
 
 
 <div class="h-1"></div>
 <div>
-    <div class="bg-white/[.05] flex min-h-16 w-full cursor-pointer items-center rounded transition duration-100 hover:bg-white/[.08] hover:shadow-[0_0px_0px_1px_rgba(255,255,255,0.1)] active:bg-white/[.03]">
-    <div class="w-5"></div>
-    <FluentIcon Value="@(new Icons.Regular.Size20.PuzzlePiece())" Color="@Color.Neutral" />
-    <div class="w-5"></div>
+    <div class="bg-white/[.05] flex min-h-16 w-full cursor-pointer items-center rounded transition duration-100 hover:bg-white/[.08] hover:shadow-[0_0px_0px_1px_rgba(255,255,255,0.1)] active:bg-white/[.03]" @onclick="() => {disabledAddonsOpenAccordion = !disabledAddonsOpenAccordion;}">
+        <div class="w-5"></div>
+        <FluentIcon Value="@(new Icons.Regular.Size20.PuzzlePiece())" Color="@Color.Neutral" />
+        <div class="w-5"></div>
         <div class="flex w-full flex-row">
-                <div class="flex h-full w-full flex-col items-center justify-start">
-                    <div class="w-full font-normal">
-                        Disabled Add-ons
-                    </div>
-                    <div class="text-white/75 w-full text-xs font-light">
-                        A list of add-ons you disabled.
-                    </div>
+            <div class="flex h-full w-full flex-col items-center justify-start">
+                <div class="w-full font-normal">
+                    Disabled Add-ons
                 </div>
-                <div class="flex w-full flex-row items-center justify-end">
+                <div class="text-white/75 w-full text-xs font-light">
+                    A list of add-ons you disabled.
+                </div>
+            </div>
+            <div class="flex w-full flex-row items-center justify-end">
+                <div class="@(disabledAddonsOpenAccordion ? "rotate-0" : "rotate-180") transition-all duration-150 ease-in-out">
                     <FluentIcon Value="@(new Icons.Regular.Size20.ChevronUp())" Color="@Color.Neutral" />
-                    <div class="w-4"></div>
                 </div>
+
+                <div class="w-4"></div>
+            </div>
         </div>
     </div>
 </div>
-<div class="bg-white/[.05] flex min-h-16 w-full flex-row items-center rounded p-4 mt-[1px]">
-    <div class="w-full min-h-28">
-        There are no disabled add-ons.
+<div class="transition-[height] @(disabledAddonsOpenAccordion ? "h-fit" : "h-[0px]") w-full overflow-hidden transition-all duration-150">
+    <div class="bg-white/[.05] mt-[1px] flex min-h-16 w-full flex-col items-start rounded p-2">
+        @if (Home.disabledAddons.Count == 0)
+        {
+            <div class="m-2 min-h-28 w-full">
+                There are no disabled addons.
+            </div>
+        }
+        else
+        {
+
+            @foreach (var item in Home.disabledAddons)
+            {
+                @AddonItem(
+            @<div>
+                <div>
+                    @item.Description, Version: @item.Version
+                </div>
+                <div>
+                    Created by: @item.Author
+                </div>
+
+            </div>
+                         ,
+            @<div class="flex w-full flex-row items-end justify-end">
+                <FluentButton Appearance="Appearance.Neutral" @onclick="() => AddOrRemoveFromEnable(item)">
+                    @GetEnableButtonText(item)
+                </FluentButton>
+                <div class="w-4"></div>
+                <FluentButton Appearance="Appearance.Neutral" @onclick="() => AddOrRemoveFromUninstall(item)">
+                    @GetUninstallButtonText(item)
+                </FluentButton>
+            </div>, selectedDisabledAddon == item.ClientID, item, () =>
+                {
+                    selectedDisabledAddon = item.ClientID;
+                })
+            }
+
+        }
+
+        <div class="flex w-full flex-row justify-end"></div>
     </div>
-    <div class="flex w-full flex-row justify-end"></div>
-</div>
-<div class="bg-white/[.05] flex min-h-16 w-full flex-row items-center rounded p-4 mt-[1px]">
-    <div class="w-full"></div>
-    <div class="flex w-full flex-row justify-end">
-        <FluentButton Appearance="Appearance.Neutral"> Enable All </FluentButton>
+    <div class="bg-white/[.05] mt-[1px] flex min-h-16 w-full flex-row items-center rounded p-4">
+        <div class="w-full"></div>
+        <div class="flex w-full flex-row justify-end">
+            <FluentButton Appearance="Appearance.Neutral" @onclick="() => {
+                foreach (var item in Home.disabledAddons)
+                {
+                    pendingChanges[item.ClientID] = ChangeType.Enable;
+                }
+            }"> Enable All </FluentButton>
+        </div>
     </div>
 </div>
+
 
 <div class="h-8"></div>
 <div class="h-8"></div>
@@ -93,7 +183,7 @@
     <div class="h-8"></div>
 
     <div class="card flex flex-row items-center justify-center overflow-scroll p-4">
-    <FluentButton @onclick="@(async () => {
+        <FluentButton @onclick="@(async () => {
                     var req = App.Instance.controlPort;
                     var res = new UriBuilder(
                         new Uri("http://localhost:" + req + "/installaddon")
@@ -111,11 +201,11 @@
                     }
                     await JS.InvokeVoidAsync("refreshaddons");
                 })">
-        <FluentIcon Value="@(new Icons.Regular.Size20.ArrowDownload())" Slot="start" Color="Color.Neutral"></FluentIcon>
-        Install addon (.zip)
-    </FluentButton>
-    <div class="w-4"></div>
-    <FluentButton @onclick="@(async() => {
+            <FluentIcon Value="@(new Icons.Regular.Size20.ArrowDownload())" Slot="start" Color="Color.Neutral"></FluentIcon>
+            Install addon (.zip)
+        </FluentButton>
+        <div class="w-4"></div>
+        <FluentButton @onclick="@(async() => {
                     var req = App.Instance.controlPort;
 
                     var res = new UriBuilder(
@@ -134,9 +224,9 @@
                     }
                     await JS.InvokeVoidAsync("refreshaddons");
                 })">
-        <FluentIcon Value="@(new Icons.Regular.Size20.ArrowDownload())" Slot="start" Color="Color.Neutral"></FluentIcon>
-        Install addon (folder)
-    </FluentButton>
+            <FluentIcon Value="@(new Icons.Regular.Size20.ArrowDownload())" Slot="start" Color="Color.Neutral"></FluentIcon>
+            Install addon (folder)
+        </FluentButton>
     </div>
     <div class="h-8"></div>
 
@@ -144,35 +234,35 @@
                 font-size: 20px;
                 font-weight: 500;
                                 ">
-    Running Addons
+        Running Addons
     </div>
     <div class="h-4"></div>
     <div class="card flex flex-row items-center" style="padding-left: 16px; overflow: overlay;">
-    There are currently no addons enabled
+        There are currently no addons enabled
     </div>
     <FluentAccordion>
 
-    @foreach (var item in Home.addonManifests)
-    {
-        string itemid = item.ClientID;
-        <FluentAccordionItem Heading="@(item.Name + " (" + item.ClientID + ")")" Style="
+        @foreach (var item in Home.addonManifests)
+        {
+            string itemid = item.ClientID;
+            <FluentAccordionItem Heading="@(item.Name + " (" + item.ClientID + ")")" Style="
                         padding: 10px;
-                                                        ">
-            <FluentIcon Value="@(new Icons.Regular.Size24.PuzzlePiece())" Color="@Color.Neutral" Slot="start" />
-            <div slot="end">
-                <FluentButton IconEnd="@(new Icons.Regular.Size16.MoreHorizontal())" Id="@itemid" Title="Other settings"
-                    OnClick="@(() => {
+                                                                    ">
+                <FluentIcon Value="@(new Icons.Regular.Size24.PuzzlePiece())" Color="@Color.Neutral" Slot="start" />
+                <div slot="end">
+                    <FluentButton IconEnd="@(new Icons.Regular.Size16.MoreHorizontal())" Id="@itemid" Title="Other settings"
+                                  OnClick="@(() => {
                                                 menuOpen[itemid] = true;
                                           })" />
-            </div>
-            <div>Author: @item.Author</div>
-            <div>Version: @item.Version</div>
-            <div>Client ID: @item.ClientID</div>
-            <div>Description: @item.Description</div>
-            <div>Bootstrap executable: @item.BootstrapExecutable</div>
+                </div>
+                <div>Author: @item.Author</div>
+                <div>Version: @item.Version</div>
+                <div>Client ID: @item.ClientID</div>
+                <div>Description: @item.Description</div>
+                <div>Bootstrap executable: @item.BootstrapExecutable</div>
 
-            <div>Auto restart enabled: @item.EnableRestart</div>
-            <FluentMenu Anchor="@itemid" Open="@(menuOpen.ContainsKey(itemid) ? menuOpen[itemid] : false)" @onmenuchange="@((MenuChangeEventArgs e) => {
+                <div>Auto restart enabled: @item.EnableRestart</div>
+                <FluentMenu Anchor="@itemid" Open="@(menuOpen.ContainsKey(itemid) ? menuOpen[itemid] : false)" @onmenuchange="@((MenuChangeEventArgs e) => {
                            menuOpen[itemid] = false;
                            Console.WriteLine("Menu closed");
                            switch (e.Value) {
@@ -185,21 +275,21 @@
 
                            }
                         })" VerticalThreshold="170">
-                <FluentMenuItem>
-                    <span slot="start">
-                        <FluentIcon Value="@(new Icons.Regular.Size20.Pause())" Color="Color.Neutral" Slot="start" />
-                    </span>
-                    Disable
-                </FluentMenuItem>
-                <FluentMenuItem>
-                    <span slot="start">
-                        <FluentIcon Value="@(new Icons.Regular.Size20.UninstallApp())" Color="Color.Neutral" Slot="start" />
-                    </span>
-                    Uninstall
-                </FluentMenuItem>
-            </FluentMenu>
-        </FluentAccordionItem>
-    }
+                    <FluentMenuItem>
+                        <span slot="start">
+                            <FluentIcon Value="@(new Icons.Regular.Size20.Pause())" Color="Color.Neutral" Slot="start" />
+                        </span>
+                        Disable
+                    </FluentMenuItem>
+                    <FluentMenuItem>
+                        <span slot="start">
+                            <FluentIcon Value="@(new Icons.Regular.Size20.UninstallApp())" Color="Color.Neutral" Slot="start" />
+                        </span>
+                        Uninstall
+                    </FluentMenuItem>
+                </FluentMenu>
+            </FluentAccordionItem>
+        }
 
     </FluentAccordion>
 
@@ -208,35 +298,35 @@
                 font-size: 20px;
                 font-weight: 500;
                                 ">
-    Disabled Addons
+        Disabled Addons
     </div>
     <div class="h-4"></div>
     <div class="card flex flex-row items-center" style="padding-left: 16px; overflow: overlay;">
-    You have no addons
+        You have no addons
     </div>
     <FluentAccordion>
 
-    @foreach (var item in Home.disabledAddons)
-    {
-        string itemid = item.ClientID;
-        <FluentAccordionItem Heading="@(item.Name + " (" + item.ClientID + ")")" Style="
+        @foreach (var item in Home.disabledAddons)
+        {
+            string itemid = item.ClientID;
+            <FluentAccordionItem Heading="@(item.Name + " (" + item.ClientID + ")")" Style="
                         padding: 10px;
-                                                            ">
-            <FluentIcon Value="@(new Icons.Regular.Size24.PuzzlePiece())" Color="@Color.Neutral" Slot="start" />
-            <div slot="end">
-                <FluentButton IconEnd="@(new Icons.Regular.Size16.MoreHorizontal())" Id="@itemid" Title="Other settings"
-                    OnClick="@(() => {
+                                                                        ">
+                <FluentIcon Value="@(new Icons.Regular.Size24.PuzzlePiece())" Color="@Color.Neutral" Slot="start" />
+                <div slot="end">
+                    <FluentButton IconEnd="@(new Icons.Regular.Size16.MoreHorizontal())" Id="@itemid" Title="Other settings"
+                                  OnClick="@(() => {
                                                 menuOpen[itemid] = true;
                                           })" />
-            </div>
-            <div>Author: @item.Author</div>
-            <div>Version: @item.Version</div>
-            <div>Client ID: @item.ClientID</div>
-            <div>Description: @item.Description</div>
-            <div>Bootstrap executable: @item.BootstrapExecutable</div>
+                </div>
+                <div>Author: @item.Author</div>
+                <div>Version: @item.Version</div>
+                <div>Client ID: @item.ClientID</div>
+                <div>Description: @item.Description</div>
+                <div>Bootstrap executable: @item.BootstrapExecutable</div>
 
-            <div>Auto restart enabled: @item.EnableRestart</div>
-            <FluentMenu Anchor="@itemid" Open="@(menuOpen.ContainsKey(itemid) ? menuOpen[itemid] : false)" @onmenuchange="@((MenuChangeEventArgs e) => {
+                <div>Auto restart enabled: @item.EnableRestart</div>
+                <FluentMenu Anchor="@itemid" Open="@(menuOpen.ContainsKey(itemid) ? menuOpen[itemid] : false)" @onmenuchange="@((MenuChangeEventArgs e) => {
                            menuOpen[itemid] = false;
                            Console.WriteLine("Menu closed");
                            switch (e.Value) {
@@ -249,92 +339,92 @@
 
                            }
                         })" VerticalThreshold="170">
-                <FluentMenuItem>
-                    <span slot="start">
-                        <FluentIcon Value="@(new Icons.Regular.Size20.Play())" Color="Color.Neutral" Slot="start" />
-                    </span>
-                    Enable
-                </FluentMenuItem>
-                <FluentMenuItem>
-                    <span slot="start">
-                        <FluentIcon Value="@(new Icons.Regular.Size20.UninstallApp())" Color="Color.Neutral" Slot="start" />
-                    </span>
-                    Uninstall
-                </FluentMenuItem>
-            </FluentMenu>
-        </FluentAccordionItem>
-    }
+                    <FluentMenuItem>
+                        <span slot="start">
+                            <FluentIcon Value="@(new Icons.Regular.Size20.Play())" Color="Color.Neutral" Slot="start" />
+                        </span>
+                        Enable
+                    </FluentMenuItem>
+                    <FluentMenuItem>
+                        <span slot="start">
+                            <FluentIcon Value="@(new Icons.Regular.Size20.UninstallApp())" Color="Color.Neutral" Slot="start" />
+                        </span>
+                        Uninstall
+                    </FluentMenuItem>
+                </FluentMenu>
+            </FluentAccordionItem>
+        }
 
     </FluentAccordion>
     <div class="h-4"></div>
     <div class="absolute bottom-0 left-0 flex w-full p-4" style="
     display: @(pendingChanges.Count > 0 ? "flex" : "none");
 ">
-    <div class="left-0 flex min-h-14 w-full flex-row items-center p-4" style="
+        <div class="left-0 flex min-h-14 w-full flex-row items-center p-4" style="
     background-color: rgba(0,0,0,0.15);
     border-radius: 12px;
 
 ">
-        <div class="w-full">You have unapplied changes</div>
-        <div class="flex w-full flex-row items-end justify-end">
-            <FluentButton Appearance="Appearance.Stealth" @onclick="@(() => {pendingChanges.Clear();})">
-                Discard changes
-            </FluentButton>
-            <div class="w-4"></div>
-            <FluentButton Appearance="Appearance.Accent" @onclick="@(() => {showConfirmDialog=true;})">
-                Apply changes
-            </FluentButton>
+            <div class="w-full">You have unapplied changes</div>
+            <div class="flex w-full flex-row items-end justify-end">
+                <FluentButton Appearance="Appearance.Stealth" @onclick="@(() => {pendingChanges.Clear();})">
+                    Discard changes
+                </FluentButton>
+                <div class="w-4"></div>
+                <FluentButton Appearance="Appearance.Accent" @onclick="@(() => {showConfirmDialog=true;})">
+                    Apply changes
+                </FluentButton>
+            </div>
         </div>
-    </div>
     </div>
     <div class="card2 absolute left-0 top-0 h-full w-full flex-col items-center justify-center" style="
         display: @(showConfirmDialog ? "flex" : "none");
     ">
-    <div class="m-8 bg-neutral-700 p-8" style="
+        <div class="m-8 bg-neutral-700 p-8" style="
         border-radius: 12px;
     ">
-        <div style="
+            <div style="
                 font-size: 26px;
                 font-weight: 600;
                             ">
-            Apply changes?
-        </div>
-        <div class="h-8"></div>
-        Pressing this button will apply all of the changes that you have defined in the add-ons panel and will also
-        restart the program immediately after completing all the changes. Are you sure you want to continue?
-        <div class="h-8"></div>
-        <div class="flex w-full flex-row items-end justify-end">
-            <FluentButton Appearance="Appearance.Stealth" @onclick="@(() => {showConfirmDialog=false;})">
-                Cancel
-            </FluentButton>
-            <div class="w-4"></div>
-            <FluentButton Appearance="Appearance.Accent" @onclick="@(async () => {
+                Apply changes?
+            </div>
+            <div class="h-8"></div>
+            Pressing this button will apply all of the changes that you have defined in the add-ons panel and will also
+            restart the program immediately after completing all the changes. Are you sure you want to continue?
+            <div class="h-8"></div>
+            <div class="flex w-full flex-row items-end justify-end">
+                <FluentButton Appearance="Appearance.Stealth" @onclick="@(() => {showConfirmDialog=false;})">
+                    Cancel
+                </FluentButton>
+                <div class="w-4"></div>
+                <FluentButton Appearance="Appearance.Accent" @onclick="@(async () => {
                     await ApplyChanges();
             })">
-                Apply changes and restart
-            </FluentButton>
+                    Apply changes and restart
+                </FluentButton>
+            </div>
         </div>
-    </div>
     </div>
     <div class="card2 absolute left-0 top-0 h-full w-full flex-col items-center justify-center" style="
         display: @(showErrorMessage ? "flex" : "none");
     ">
-    <div class="m-8 bg-neutral-700 p-8" style="
+        <div class="m-8 bg-neutral-700 p-8" style="
         border-radius: 12px;
     ">
-        <div style="
+            <div style="
                 font-size: 26px;
                 font-weight: 600;
                             ">
-            Failed.
+                Failed.
+            </div>
+            <div class="h-8"></div>
+            <div class="flex w-full flex-row items-end justify-end">
+                <FluentButton Appearance="Appearance.Accent" @onclick="@(() => {showErrorMessage=false;})">
+                    Close
+                </FluentButton>
+            </div>
         </div>
-        <div class="h-8"></div>
-        <div class="flex w-full flex-row items-end justify-end">
-            <FluentButton Appearance="Appearance.Accent" @onclick="@(() => {showErrorMessage=false;})">
-                Close
-            </FluentButton>
-        </div>
-    </div>
     </div>
 </div>
 
@@ -369,6 +459,14 @@
 
     private bool showErrorMessage = false;
 
+    private string selectedEnabledAddon = null;
+
+    private string selectedDisabledAddon = null;
+
+    private bool enabledAddonsOpenAccordion = false;
+
+    private bool disabledAddonsOpenAccordion = false;
+
     private async Task OpenDialogAsync(string status)
     {
         DialogParameters parameters = new()
@@ -394,8 +492,8 @@
             jsonRep.Add(item.Key, Enum.GetName(typeof(ChangeType), item.Value));
         }
         var res = new UriBuilder(
-        new Uri($"http://127.0.0.1:{App.Instance.controlPort}/addonchanges")
-        );
+    new Uri($"http://127.0.0.1:{App.Instance.controlPort}/addonchanges")
+    );
         res.Query = "?changes=" + JsonSerializer.Serialize(jsonRep);
         var request = await client.GetAsync(res.Uri);
         if (request.IsSuccessStatusCode)
@@ -405,6 +503,111 @@
         else
         {
             showErrorMessage = true;
+        }
+    }
+
+    private string GetUninstallButtonText(AddonManifest addonManifest)
+    {
+        if (pendingChanges.Any(x => x.Value == ChangeType.Uninstall && x.Key == addonManifest.ClientID))
+        {
+            return "Cancel uninstall";
+        }
+        else
+        {
+            return "Uninstall";
+        }
+    }
+
+    private string GetEnableButtonText(AddonManifest addonManifest)
+    {
+        if (pendingChanges.Any(x => x.Value == ChangeType.Enable && x.Key == addonManifest.ClientID))
+        {
+            return "Cancel enable";
+        }
+        else
+        {
+            return "Enable";
+        }
+    }
+
+    private string GetDisableButtonText(AddonManifest addonManifest)
+    {
+        if (pendingChanges.Any(x => x.Value == ChangeType.Disable && x.Key == addonManifest.ClientID))
+        {
+            return "Cancel disable";
+        }
+        else
+        {
+            return "Disable";
+        }
+    }
+
+    private void AddOrRemoveFromUninstall(AddonManifest manifest)
+    {
+        if (pendingChanges.Any(x => x.Value == ChangeType.Uninstall && x.Key == manifest.ClientID))
+        {
+            pendingChanges.Remove(manifest.ClientID);
+        }
+        else
+        {
+            pendingChanges[manifest.ClientID] = ChangeType.Uninstall;
+        }
+    }
+
+    private void AddOrRemoveFromEnable(AddonManifest manifest)
+    {
+        if (pendingChanges.Any(x => x.Value == ChangeType.Enable && x.Key == manifest.ClientID))
+        {
+            pendingChanges.Remove(manifest.ClientID);
+        }
+        else
+        {
+            pendingChanges[manifest.ClientID] = ChangeType.Enable;
+        }
+    }
+
+    private void AddOrRemoveFromDisable(AddonManifest manifest)
+    {
+        if (pendingChanges.Any(x => x.Value == ChangeType.Disable && x.Key == manifest.ClientID))
+        {
+            pendingChanges.Remove(manifest.ClientID);
+        }
+        else
+        {
+            pendingChanges[manifest.ClientID] = ChangeType.Disable;
+        }
+    }
+
+    private RenderFragment AddonItem(RenderFragment content, RenderFragment bottomButtons, bool isSelected, AddonManifest addon, Action onPick)
+    {
+
+        if (isSelected)
+        {
+            return@<div class="bg-white/[.05] mb-1 flex h-max min-h-4 w-full flex-col rounded p-4 transition-all duration-150 ease-in-out hover:bg-white/[.03] hover:shadow-[0_0px_0px_1px_rgba(255,255,255,0.1)] active:bg-white/[.06]">
+        <div class="flex h-max w-full flex-row">
+            <FluentIcon Value="@(new Icons.Regular.Size20.PuzzlePiece())" />
+            <div class="w-4"></div>
+            @addon.Name
+        </div>
+        <div class="ml-9">
+            @content
+        </div>
+        <div class="flex w-full flex-row items-end justify-end">
+            @bottomButtons
+
+        </div>
+    </div>
+    ;
+        }
+        else
+        {
+            return@<div class="mb-1 flex h-max min-h-4 w-full flex-row rounded p-4 transition-all duration-300 ease-in-out hover:bg-white/[.06] hover:shadow-[0_0px_0px_1px_rgba(255,255,255,0.1)] active:bg-white/[.02]" @onclick="() => {
+                    onPick();
+                }">
+        <FluentIcon Value="@(new Icons.Regular.Size20.PuzzlePiece())" />
+        <div class="w-4"></div>
+        @addon.Name
+    </div>;
         }
     }
 

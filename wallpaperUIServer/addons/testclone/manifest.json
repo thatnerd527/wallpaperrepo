@@ -1,0 +1,8 @@
+{
+    "name": "Test Addon",
+    "version": "1.0",
+    "clientID": "addontemplate",
+    "description": "This is a test addon",
+    "author": "Test",
+    "bootstrapExecutable": "addontemplate.exe"
+}

@@ -6,7 +6,11 @@ module.exports = {
             './wwwroot/index.html' //not necessary if you use Blazor 8 Web App (not just standalone wasm app)
         ],
   theme: {
-    extend: {},
+        extend: {
+            transitionProperty: {
+                'cardexpand': 'max-width, max-height, opacity'
+            }
+        },
   },
   plugins: [],
 }

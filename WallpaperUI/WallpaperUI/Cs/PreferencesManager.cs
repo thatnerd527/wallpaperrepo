@@ -46,15 +46,21 @@ namespace WallpaperUI.Cs
             return JsonSerializer.Serialize(_preferences);
         }
 
-        public dynamic Get(string key) {
+        public T Get<T>(string key) {
             return _preferences[key];
         }
 
-        public dynamic GetOrDefault(string key, dynamic defaultValue) {
+        public T GetOrDefault<T>(string key, T defaultValue)
+        {
             return _preferences.ContainsKey(key) ? _preferences[key] : defaultValue;
         }
 
-        public void Set(string key, dynamic value) {
+            public dynamic GetOrDefault2(string key, dynamic defaultValue)
+            {
+                return _preferences.ContainsKey(key) ? _preferences[key] : defaultValue;
+            }
+
+            public void Set(string key, dynamic value) {
             _preferences[key] = value;
             foreach (var handler in changeHandler.ToList())
             {
