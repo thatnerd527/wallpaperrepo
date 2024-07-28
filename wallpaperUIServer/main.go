@@ -72,9 +72,10 @@ func main() {
 			log.Println(err)
 		}
 		proc, err := os.FindProcess(pid)
-		fmt.Println("Found previous instance with pid", pid, "name: ",proc.Kill())
+
 		if err == nil {
 			fmt.Println("Already running")
+			fmt.Println("Found previous instance with pid", pid, "name: ",proc.Kill())
 			os.Exit(0)
 			return
 		} else {
@@ -119,6 +120,7 @@ func main() {
 	secureMux.HandleFunc("/autostart",autoStartHandler)
 	secureMux.HandleFunc("/addonchanges",applyAddonChanges)
 	secureMux.HandleFunc("/getpreviewfile",previewFileHandler)
+	secureMux.HandleFunc("/setbackgroundfromcache",setBackgroundFromCache)
 
 	defaultMux := http.NewServeMux()
 	defaultMux.HandleFunc("/", fileHandler)

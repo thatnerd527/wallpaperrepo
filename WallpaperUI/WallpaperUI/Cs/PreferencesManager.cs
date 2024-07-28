@@ -6,24 +6,30 @@ namespace WallpaperUI.Cs
     {
         private List<Func<Dictionary<string, dynamic>,Dictionary<string, dynamic>>> changeHandler = new();
         private Dictionary<string, dynamic> _preferences;
+        public bool loopBreak = false;
 
-        public PreferencesManager() {
+        public PreferencesManager()
+        {
             _preferences = new Dictionary<string, dynamic>();
-        
+
         }
-        public PreferencesManager(Dictionary<string, dynamic> preferences) {
+        public PreferencesManager(Dictionary<string, dynamic> preferences)
+        {
             _preferences = preferences;
         }
 
-        public void AddChangeHandler(Func<Dictionary<string, dynamic>,Dictionary<string, dynamic>> handler) {
+        public void AddChangeHandler(Func<Dictionary<string, dynamic>, Dictionary<string, dynamic>> handler)
+        {
             changeHandler.Add(handler);
         }
 
-        public void RemoveChangeHandler(Func<Dictionary<string, dynamic>,Dictionary<string, dynamic>> handler) {
+        public void RemoveChangeHandler(Func<Dictionary<string, dynamic>, Dictionary<string, dynamic>> handler)
+        {
             changeHandler.Remove(handler);
         }
 
-        public Dictionary<string, dynamic> GetPreferences() {
+        public Dictionary<string, dynamic> GetPreferences()
+        {
             return _preferences;
         }
 
@@ -46,7 +52,8 @@ namespace WallpaperUI.Cs
             return JsonSerializer.Serialize(_preferences);
         }
 
-        public T Get<T>(string key) {
+        public T Get<T>(string key)
+        {
             return _preferences[key];
         }
 
@@ -55,12 +62,13 @@ namespace WallpaperUI.Cs
             return _preferences.ContainsKey(key) ? _preferences[key] : defaultValue;
         }
 
-            public dynamic GetOrDefault2(string key, dynamic defaultValue)
-            {
-                return _preferences.ContainsKey(key) ? _preferences[key] : defaultValue;
-            }
+        public dynamic GetOrDefault2(string key, dynamic defaultValue)
+        {
+            return _preferences.ContainsKey(key) ? _preferences[key] : defaultValue;
+        }
 
-            public void Set(string key, dynamic value) {
+        public void Set(string key, dynamic value)
+        {
             _preferences[key] = value;
             foreach (var handler in changeHandler.ToList())
             {
@@ -68,7 +76,8 @@ namespace WallpaperUI.Cs
             }
         }
 
-        public void Remove(string key) {
+        public void Remove(string key)
+        {
             _preferences.Remove(key);
             foreach (var handler in changeHandler.ToList())
             {
@@ -76,7 +85,8 @@ namespace WallpaperUI.Cs
             }
         }
 
-        public void Clear() {
+        public void Clear()
+        {
             _preferences.Clear();
             foreach (var handler in changeHandler.ToList())
             {
@@ -84,8 +94,10 @@ namespace WallpaperUI.Cs
             }
         }
 
-        public void Add(string key, dynamic value) {
-            if (!_preferences.ContainsKey(key)) {
+        public void Add(string key, dynamic value)
+        {
+            if (!_preferences.ContainsKey(key))
+            {
                 _preferences.Add(key, value);
             }
             foreach (var handler in changeHandler.ToList())
@@ -94,7 +106,8 @@ namespace WallpaperUI.Cs
             }
         }
 
-        public void SetFrom(Dictionary<string, dynamic> preferences) {
+        public void SetFrom(Dictionary<string, dynamic> preferences)
+        {
             _preferences = preferences;
             foreach (var handler in changeHandler.ToList())
             {

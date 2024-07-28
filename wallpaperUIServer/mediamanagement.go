@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 
 	"github.com/sqweek/dialog"
@@ -22,6 +23,48 @@ func FileNameToMediaType(filename string) string {
 		return "Image"
 	default:
 		return "unknown"
+	}
+}
+
+func setBackgroundFromCache(w http.ResponseWriter, r *http.Request) {
+	if r.Method == "GET" {
+		w.Header().Add("Access-Control-Allow-Origin", "*")
+		if !r.URL.Query().Has("delete") {
+			filename, err := filepath.Abs(path.Join("result", r.URL.Query().Get("filename")))
+			if err != nil {
+				log.Println(err)
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+			pref := cachedpreferences
+			if _, err := os.Stat(filename); err == nil {
+				path2 := filename
+				pref["simplebackground"] = path2
+				cachedpreferences = pref
+				fmt.Println("Set simple background to " + path2)
+				preferenceschannel.SendMessage(PreferenceUpdate{cachedpreferences, GenerateGUID(), false})
+			} else {
+				log.Println("File not found")
+				w.WriteHeader(http.StatusNotFound)
+			}
+			return
+		} else {
+			filename, err := filepath.Abs(path.Join("result", r.URL.Query().Get("filename")))
+			if err != nil {
+				log.Println(err)
+				w.WriteHeader(http.StatusInternalServerError)
+				return
+			}
+
+			if _, err := os.Stat(filename); err == nil {
+				err := os.Remove(filename)
+				if err != nil {
+					log.Println(err)
+					w.WriteHeader(http.StatusInternalServerError)
+					return
+				}
+			}
+		}
 	}
 }
 

@@ -105,7 +105,14 @@
         {
             var guid = Guid.NewGuid().ToString();
             <div class="hover:bg-white/[.08] active:bg-white/[.05] transition-all duration-150 ease-in-out cursor-pointer flex h-24 w-24 flex-col items-center justify-center rounded overflow-hidden border-transparent border-2 hover:border-white" @onclick="@(async () => {
-
+                    App.Instance.preferencesManager.Set("simplebackground", "");
+                    var req = App.Instance.controlPort;
+                    var res = new UriBuilder(
+                        new Uri("http://127.0.0.1:" + req + "/setbackgroundfromcache")
+                    );
+                    
+                    res.Query = "filename=" + bkg.Value.Filename;
+                    var result = await client.GetAsync(res.Uri);
             })">
                 @if (bkg.Value.Filename.EndsWith(".png"))
                 {

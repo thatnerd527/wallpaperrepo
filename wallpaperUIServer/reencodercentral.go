@@ -79,10 +79,11 @@ func reencodeVideoFile(inputfile string, outputfile string, codec string, qualit
 	process.Stdout = os.Stdout
 	process.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 	err := process.Run()
-	addRecentMediaBackground(GenerateGUID(), filepath.Base(outputfile), "")
+
 	if err != nil {
 		controlchannel <- "error," + err.Error()
 	} else {
+		addRecentMediaBackground(GenerateGUID(), filepath.Base(outputfile), "")
 		controlchannel <- "done"
 		donechannel <- true
 	}
@@ -107,10 +108,10 @@ func reencodeImageFile(inputfile string, outputfile string, controlchannel chan 
 	process.Stdout = os.Stdout
 	process.SysProcAttr = &syscall.SysProcAttr{HideWindow: true}
 	err := process.Run()
-	addRecentMediaBackground(GenerateGUID(), filepath.Base(outputfile), "")
 	if err != nil {
 		controlchannel <- "error," + err.Error()
 	} else {
+		addRecentMediaBackground(GenerateGUID(), filepath.Base(outputfile), "")
 		controlchannel <- "done"
 		donechannel <- true
 	}

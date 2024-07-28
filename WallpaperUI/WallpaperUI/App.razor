@@ -33,11 +33,16 @@
     private IJSObjectReference preferencesSystem;
     private IJSObjectReference restartSystem;
     public int controlPort = 0;
+    private bool loopBreak = false;
     protected override async Task OnInitializedAsync()
     {
         Instance = this;
         preferencesManager.AddChangeHandler((x) =>
         {
+            if (loopBreak)
+            {
+                return x;
+            }
             SavePreferences(preferencesManager);
             return x;
         });
@@ -75,8 +80,11 @@
     [JSInvokable]
     public static void UpdatePreferences(string data)
     {
+
         var result = JsonSerializer.Deserialize<Dictionary<string, dynamic>>(data);
+        App.Instance.loopBreak = true;
         Instance.preferencesManager.SetFrom(result);
+        App.Instance.loopBreak = false;
     }
 
     public static void SavePreferences(PreferencesManager pm)

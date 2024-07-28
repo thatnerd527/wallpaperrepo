@@ -20,8 +20,63 @@ type PreferenceUpdate struct {
 var preferenceschannel = CreateMessageHub[PreferenceUpdate]()
 var cachedpreferences map[string]interface{} = make(map[string]interface{})
 
+// DeepEqual compares two maps deeply
+func DeepEqual(map1, map2 map[string]interface{}) bool {
+	return deepEqual(map1, map2)
+}
+
+// deepEqual is a helper function that handles the actual deep comparison
+func deepEqual(val1, val2 interface{}) bool {
+	if reflect.TypeOf(val1) != reflect.TypeOf(val2) {
+		return false
+	}
+
+	switch v1 := val1.(type) {
+	case map[string]interface{}:
+		v2, ok := val2.(map[string]interface{})
+		if !ok {
+			return false
+		}
+		if len(v1) != len(v2) {
+			return false
+		}
+		for k, v := range v1 {
+			if !deepEqual(v, v2[k]) {
+				return false
+			}
+		}
+		return true
+	case []interface{}:
+		v2, ok := val2.([]interface{})
+		if !ok {
+			return false
+		}
+		if len(v1) != len(v2) {
+			return false
+		}
+		for i := range v1 {
+			if !deepEqual(v1[i], v2[i]) {
+				return false
+			}
+		}
+		return true
+	default:
+		return reflect.DeepEqual(val1, val2)
+	}
+}
+
+
 func isJsonSame(a map[string]interface{}, b map[string]interface{}) bool {
-	return reflect.DeepEqual(a, b)
+	comp1, err := json.Marshal(a)
+	if err != nil {
+		return false
+	}
+	comp2, err := json.Marshal(b)
+	if err != nil {
+		return false
+	}
+	fmt.Println("SAME: ", string(comp1) == string(comp2))
+	return string(comp1) == string(comp2)
 }
 
 func preferencesSystem(w http.ResponseWriter, r *http.Request) {
@@ -74,7 +129,7 @@ func preferencesSystem(w http.ResponseWriter, r *http.Request) {
 		for {
 			fmt.Println("Waiting for message")
 			msg := preferenceschannel.WaitForMessage()
-			fmt.Println("Sending message: ", msg)
+			//fmt.Println("Sending message: ", msg)
 			fmt.Println("PREFUPDATE")
 			if msg.Stop && msg.ClientID == clientid {
 				break
