@@ -36,7 +36,8 @@ export function MainScreen() {
               width: "64px",
               height: "64px",
               position: "relative",
-              marginTop: "8px",
+              marginTop: "2px",
+              marginBottom: "6px",
               display: frame >= 216 ? "block" : "none",
             }}
           />

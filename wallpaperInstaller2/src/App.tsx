@@ -20,10 +20,10 @@ function App() {
       backgroundColor: 'rgba(0, 0, 0, 0.5)'
     }}>
       <div
-        className="w-full min-h-14 p-4 flex flex-row justify-end items-center align-middle"
+        className="w-full min-h-14 p-4 flex flex-row justify-end items-center align-middle absolute"
         style={
           {
-            backgroundColor: "rgba(0, 0, 0, 0.2)",
+            backgroundColor: "rgba(0, 0, 0, 0)",
             WebkitAppRegion: "drag",
           } as any
         }
@@ -38,6 +38,7 @@ function App() {
           <img src={logoVite} alt="logo-vite" className="w-12 h-12" />
         </div>
       </div>
+      <div className='h-8'></div>
       <FluentProvider theme={webDarkTheme} className='w-full h-full' style={{
         backgroundColor: 'transparent',
       }}>
