@@ -49,7 +49,7 @@ export function Opening() {
         </div>
       </Sequence>
       <Sequence from={156} durationInFrames={60}>
-        <div className="w-full h-full flex flex-col justify-center items-center">
+        <div className="w-full h-full flex flex-col justify-start items-center">
           <img
             src={applogo}
             style={{
@@ -60,7 +60,7 @@ export function Opening() {
                 easing: smalleningcurve,
               }),
               position: "relative",
-              bottom: `${interpolate(frame, [156, 216], [0, 42], {
+              marginTop: `${interpolate(frame, [156, 216], [25, 2], {
                 easing: smalleningcurve,
               })}%`,
             }}

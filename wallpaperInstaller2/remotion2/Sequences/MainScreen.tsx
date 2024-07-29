@@ -1,10 +1,11 @@
-import React from "react";
+import React, { useState } from "react";
 import { interpolate, Sequence, Easing, useCurrentFrame } from "remotion";
 import logo from "../../public/applogo.svg";
+import { Button, Checkbox, CheckboxProps } from "@fluentui/react-components";
 // Frame 216 - 600
 export function MainScreen() {
   const applogo = logo;
-
+  const [checked, setChecked] = React.useState<CheckboxProps["checked"]>(true);
   const frame = useCurrentFrame();
   const smalleningcurve = Easing.bezier(0, 1.21, 0.83, 0.92);
   return (
@@ -24,21 +25,12 @@ export function MainScreen() {
                 extrapolateRight: "clamp",
                 easing: smalleningcurve,
               }),
-              display: frame >= 216 ? "none" : "block",
               position: "relative",
-              opacity: 0,
-              marginBottom: "8px",
-            }}
-          />
-          <img
-            src={applogo}
-            style={{
-              width: "64px",
-              height: "64px",
-              position: "relative",
-              marginTop: "2px",
-              marginBottom: "6px",
-              display: frame >= 216 ? "block" : "none",
+              marginTop: `${interpolate(frame, [156, 216], [25, 2], {
+                extrapolateLeft: "clamp",
+                extrapolateRight: "clamp",
+                easing: smalleningcurve,
+              })}%`,
             }}
           />
           <h1
@@ -68,6 +60,13 @@ export function MainScreen() {
               }),
             }}
           ></div>
+          <Checkbox
+            value={"Test"}
+            checked={checked}
+            onChange={(ev, data) => {
+              setChecked(data?.checked);
+            }}
+          ></Checkbox>
         </div>
       </Sequence>
     </>
