@@ -60,7 +60,7 @@ export function Opening() {
                 easing: smalleningcurve,
               }),
               position: "relative",
-              marginTop: `${interpolate(frame, [156, 216], [25, 2], {
+              marginTop: `${interpolate(frame, [156, 216], [25, 0], {
                 easing: smalleningcurve,
               })}%`,
             }}

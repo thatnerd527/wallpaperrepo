@@ -26,7 +26,7 @@ export function MainScreen() {
                 easing: smalleningcurve,
               }),
               position: "relative",
-              marginTop: `${interpolate(frame, [156, 216], [25, 2], {
+              marginTop: `${interpolate(frame, [156, 216], [25, 0], {
                 extrapolateLeft: "clamp",
                 extrapolateRight: "clamp",
                 easing: smalleningcurve,
