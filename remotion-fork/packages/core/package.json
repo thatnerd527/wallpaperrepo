@@ -76,8 +76,5 @@
 			]
 		}
 	},
-	"homepage": "https://www.remotion.dev/docs/remotion",
-	"dependencies": {
-		"typescript": "^5.5.4"
-	}
+	"homepage": "https://www.remotion.dev/docs/remotion"
 }
