@@ -1,5 +1,5 @@
 import { PlayerRef } from "@remotion/player";
-import React from "react";
+import React, { useState } from "react";
 import {
   AbsoluteFill,
   Easing,
@@ -10,22 +10,25 @@ import {
 import logo from "../public/applogo.svg";
 import { Opening } from "./Sequences/Opening";
 import { MainScreen } from "./Sequences/MainScreen";
+import { InstallingSequence } from "./Sequences/Installing";
+import {InstallerData} from './Datas';
 export const InstallerFrame = (props: {
   playerRef: React.RefObject<PlayerRef> | null;
   playbackRate: number;
   setPlaybackRate: (rate: number) => void;
 }) => {
-  const frame = useCurrentFrame();
-  if (frame == 50 && props.playerRef != null) {
-  }
-  const applogo = logo;
-
-  const openingcurve = Easing.bezier(0.02, 1.66, 0.47, 0.33);
-  const smalleningcurve = Easing.bezier(0, 1.21, 0.83, 0.92);
+  const [data, setData] = useState(new InstallerData)
   return (
     <>
-      <Opening/>
-      <MainScreen playerRef={props.playerRef} playbackRate={props.playbackRate} setPlaybackRate={props.setPlaybackRate}/>
+      <Opening data={data} setData={setData} />
+      <MainScreen
+        playerRef={props.playerRef}
+        playbackRate={props.playbackRate}
+        setPlaybackRate={props.setPlaybackRate}
+        data={data}
+        setData={setData}
+      />
+      <InstallingSequence data={data} playbackRate={props.playbackRate} playerRef={props.playerRef} setData={setData} setPlaybackRate={props.setPlaybackRate}/>
     </>
   );
 };

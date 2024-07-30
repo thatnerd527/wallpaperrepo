@@ -1,8 +1,12 @@
 import {Easing, interpolate, Sequence, useCurrentFrame} from 'remotion';
 import React, { useMemo } from 'react';
 import logo from '../../public/applogo.svg';
+import { InstallerData } from 'remotion2/Datas';
 // Frame 0 - 216
-export function Opening() {
+export function Opening(props: {
+  data: InstallerData;
+  setData: (data: InstallerData) => void;
+}) {
     const frame = useCurrentFrame();
     const applogo = useMemo(() => logo, []);;
 

@@ -6,22 +6,19 @@ import { Screen2 } from "./MainContent/Screen2";
 import logo from "../../public/applogo.svg";
 import { Button, Checkbox, CheckboxProps } from "@fluentui/react-components";
 import { PlayerRef } from "@remotion/player";
+import {InstallerData} from '../Datas';
 // Frame 216 - 600
 export function MainScreen(props: {
   playerRef: React.RefObject<PlayerRef> | null;
   playbackRate: number;
   setPlaybackRate: (rate: number) => void;
+  data: InstallerData;
+  setData: (data: InstallerData) => void;
 }) {
   const applogo = useMemo(() => logo, []);
   const [mainConfig, setMainConfig] = useState({
     nextscreen: "screen1",
   });
-  const [page1config, setPage1Config] = useState({
-    option1: false,
-    option2: false,
-    option3: false,
-  });
-
   const [screen1config, setScreen1Config] = useState({
     data1: "",
     data2: "",
@@ -34,7 +31,7 @@ export function MainScreen(props: {
   const frame = useCurrentFrame();
   const transitionTargets = useMemo(() => {
     return {
-      screen1to2: 290,
+      screen1to2: 275,
     };
   }, []);
   useEffect(() => {
@@ -48,10 +45,11 @@ export function MainScreen(props: {
   }, [frame]);
 
   const smalleningcurve = useMemo(() => Easing.bezier(0, 1.21, 0.83, 0.92), []);
+  const transitioncurve = useMemo(() => Easing.bezier(0, 1,1,1), []);
 
   return (
     <>
-      <Sequence from={200} durationInFrames={600}>
+      <Sequence from={200} durationInFrames={80}>
         <div className="w-full h-full flex flex-col justify-start items-center">
           <img
             src={applogo}
@@ -101,9 +99,13 @@ export function MainScreen(props: {
               }),
             }}
           ></div>
+
+          {/* CONTENT */}
           <div
-            className="w-full h-full pr-4 pl-4 mt-2 flex flex-row"
+            className="pr-4 pl-4 mt-2 flex flex-row"
             style={{
+              width: "100%",
+              height: "100%",
               opacity: interpolate(frame, [200, 245], [0, 1], {
                 easing: smalleningcurve,
                 extrapolateLeft: "clamp",
@@ -112,44 +114,36 @@ export function MainScreen(props: {
             }}
           >
             <div
-              className="flex flex-col items-start"
+              className="flex flex-col items-start pb-4"
               style={{
-                minWidth: `${interpolate(
-                  frame,
-                  [245, transitionTargets.screen1to2],
-                  [100, 0],
-                  {
-                    easing: smalleningcurve,
-                    extrapolateLeft: "clamp",
-                    extrapolateRight: "clamp",
-                  }
-                )}%`,
-                maxWidth: `${interpolate(
-                  frame,
-                  [245, transitionTargets.screen1to2],
-                  [100, 0],
-                  {
-                    easing: smalleningcurve,
-                    extrapolateLeft: "clamp",
-                    extrapolateRight: "clamp",
-                  }
-                )}%`,
-                overflow: "clip",
+                position: "relative",
                 opacity: interpolate(
                   frame,
                   [245, transitionTargets.screen1to2],
                   [1, 0],
                   {
-                    easing: smalleningcurve,
-                    extrapolateLeft: "clamp",
-                    extrapolateRight: "clamp",
+                    easing: transitioncurve,
+                    extrapolateLeft: "extend",
+                    extrapolateRight: "extend",
                   }
                 ),
+                height: "100%",
+                minWidth: `100%`,
+                right: `${interpolate(
+                  frame,
+                  [245, transitionTargets.screen1to2],
+                  [0, 100],
+                  {
+                    easing: transitioncurve,
+                    extrapolateLeft: "extend",
+                    extrapolateRight: "extend",
+                  }
+                )}%`,
               }}
             >
               <div
                 style={{
-                  height: `${interpolate(frame, [200, 245], [50, 0], {
+                  height: `${interpolate(frame, [200, 245], [100, 0], {
                     easing: Easing.bezier(0, 1.21, 0.83, 0.92),
                     extrapolateLeft: "clamp",
                     extrapolateRight: "clamp",
@@ -159,51 +153,45 @@ export function MainScreen(props: {
               {useMemo(
                 () => (
                   <MainContent
-                    config={page1config}
                     mainConfig={mainConfig}
                     setMainConfig={setMainConfig}
-                    setstate={setPage1Config}
                     playerRef={props.playerRef}
+                    data={props.data}
+                    setData={props.setData}
+                    setPlaybackRate={props.setPlaybackRate}
                   />
                 ),
-                [page1config, mainConfig]
+                [mainConfig, props.data]
               )}
             </div>
 
             <div
               className="flex flex-col items-start"
               style={{
-                minWidth: `${interpolate(
-                  frame,
-                  [245, transitionTargets.screen1to2],
-                  [0, 100],
-                  {
-                    easing: smalleningcurve,
-                    extrapolateLeft: "clamp",
-                    extrapolateRight: "clamp",
-                  }
-                )}%`,
-                maxWidth: `${interpolate(
-                  frame,
-                  [245, transitionTargets.screen1to2],
-                  [0, 100],
-                  {
-                    easing: smalleningcurve,
-                    extrapolateLeft: "clamp",
-                    extrapolateRight: "clamp",
-                  }
-                )}%`,
+                minWidth: `100%`,
+                maxWidth: `100%`,
                 overflow: "clip",
                 opacity: interpolate(
                   frame,
                   [245, transitionTargets.screen1to2],
                   [0, 1],
                   {
-                    easing: smalleningcurve,
+                    easing: transitioncurve,
                     extrapolateLeft: "clamp",
                     extrapolateRight: "clamp",
                   }
                 ),
+                position: "relative",
+                right: `${interpolate(
+                  frame,
+                  [245, transitionTargets.screen1to2],
+                  [0, 100],
+                  {
+                    easing: transitioncurve,
+                    extrapolateLeft: "extend",
+                    extrapolateRight: "extend",
+                  }
+                )}%`,
               }}
             >
               {useMemo(() => {
@@ -215,6 +203,8 @@ export function MainScreen(props: {
                       setstate={setScreen1Config}
                       playbackRate={props.playbackRate}
                       setPlaybackRate={props.setPlaybackRate}
+                      data={props.data}
+                      setData={props.setData}
                     />
                   );
                 } else {
@@ -229,6 +219,8 @@ export function MainScreen(props: {
                       config={screen2config}
                       setstate={setScreen2Config}
                       setPlaybackRate={props.setPlaybackRate}
+                      data={props.data}
+                      setData={props.setData}
                     />
                   );
                 } else {
