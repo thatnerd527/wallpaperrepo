@@ -16,6 +16,8 @@ export const RemotionRoot: React.FC = () => {
           component={InstallerFrame}
           defaultProps={{
             playerRef: null,
+            setPlaybackRate: () => { },
+            playbackRate: 1,
           }}
           durationInFrames={900}
           fps={60}

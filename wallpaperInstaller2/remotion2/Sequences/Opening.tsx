@@ -1,13 +1,13 @@
 import {Easing, interpolate, Sequence, useCurrentFrame} from 'remotion';
-import React from 'react';
+import React, { useMemo } from 'react';
 import logo from '../../public/applogo.svg';
 // Frame 0 - 216
 export function Opening() {
     const frame = useCurrentFrame();
-    const applogo = logo;
+    const applogo = useMemo(() => logo, []);;
 
-  const openingcurve = Easing.bezier(0.02, 1.66, 0.47, 0.33);
-  const smalleningcurve = Easing.bezier(0, 1.21, 0.83, 0.92);
+  const openingcurve = useMemo(() => Easing.bezier(0.02, 1.66, 0.47, 0.33), []);
+  const smalleningcurve = useMemo(() => Easing.bezier(0, 1.21, 0.83, 0.92), []);
     return <>
     <Sequence from={0} durationInFrames={96}>
         <div className="w-full h-full flex flex-col justify-center items-center">

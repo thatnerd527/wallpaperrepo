@@ -12,6 +12,8 @@ import { Opening } from "./Sequences/Opening";
 import { MainScreen } from "./Sequences/MainScreen";
 export const InstallerFrame = (props: {
   playerRef: React.RefObject<PlayerRef> | null;
+  playbackRate: number;
+  setPlaybackRate: (rate: number) => void;
 }) => {
   const frame = useCurrentFrame();
   if (frame == 50 && props.playerRef != null) {
@@ -23,7 +25,7 @@ export const InstallerFrame = (props: {
   return (
     <>
       <Opening/>
-      <MainScreen/>
+      <MainScreen playerRef={props.playerRef} playbackRate={props.playbackRate} setPlaybackRate={props.setPlaybackRate}/>
     </>
   );
 };
