@@ -4,7 +4,8 @@ export class InstallerData {
   createdesktopshortcuts: boolean = true;
   enableautoupdates: boolean = true;
     sendlogs: boolean = true;
-    pressedbutton: boolean = false;
+  pressedbutton: boolean = false;
+  installfinished: boolean = false;
 
   readonly safeSetState = (
     modify: (data: InstallerData) => void,

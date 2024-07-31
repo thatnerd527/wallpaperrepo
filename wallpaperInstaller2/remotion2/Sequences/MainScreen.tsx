@@ -50,6 +50,36 @@ export function MainScreen(props: {
   return (
     <>
       <Sequence from={200} durationInFrames={80}>
+        <div className="w-full h-full flex flex-col items-center justify-center">
+          <div
+            className="w-full h-full flex flex-col justify-start items-center"
+            style={{
+              height: `${interpolate(frame, [156, 216], [0, 100], {
+                easing: smalleningcurve,
+                extrapolateLeft: "clamp",
+                extrapolateRight: "clamp",
+              })}%`,
+            }}
+          >
+            <img
+              src={applogo}
+              style={{
+                width: interpolate(frame, [156, 216], [160, 64], {
+                  easing: smalleningcurve,
+                  extrapolateLeft: "clamp",
+                  extrapolateRight: "clamp",
+                }),
+                height: interpolate(frame, [156, 216], [160, 64], {
+                  easing: smalleningcurve,
+                  extrapolateLeft: "clamp",
+                  extrapolateRight: "clamp",
+                }),
+              }}
+            />
+          </div>
+        </div>
+      </Sequence>
+      <Sequence from={200} durationInFrames={80}>
         <div className="w-full h-full flex flex-col justify-start items-center">
           <img
             src={applogo}
@@ -59,6 +89,7 @@ export function MainScreen(props: {
                 extrapolateRight: "clamp",
                 easing: smalleningcurve,
               }),
+              opacity: 0,
               height: interpolate(frame, [156, 216], [160, 64], {
                 extrapolateLeft: "clamp",
                 extrapolateRight: "clamp",

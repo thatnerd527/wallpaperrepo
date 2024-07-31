@@ -23,8 +23,10 @@
     "@fluentui/react-components": "^9.54.6",
     "@material/web": "^2.0.0",
     "@remotion/cli": "4.0.187",
+    "@remotion/lottie": "file:../remotion-fork/packages/lottie",
     "@remotion/player": "file:../remotion-fork/packages/player",
     "electron-updater": "^6.1.8",
+    "lottie-web": "^5.12.2",
     "remotion": "file:../remotion-fork/packages/core"
   },
   "sideEffects": [
