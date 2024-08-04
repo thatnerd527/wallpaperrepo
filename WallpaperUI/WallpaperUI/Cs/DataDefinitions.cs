@@ -1,20 +1,56 @@
 ﻿using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 
 namespace WallpaperUI.Cs
 {
 
+    public static class Extensions
+    {
+        public static JsonElement Set(this JsonElement element, dynamic key, JsonObject value)
+        {
+            var dict = new Dictionary<dynamic, object>();
+            foreach (var item in element.EnumerateObject())
+            {
+                dict.Add(item.Name, item.Value);
+            }
+            dict[key] = value;
+            var ser = JsonSerializer.Serialize(dict);
+            var derser = JsonSerializer.Deserialize<JsonElement>(ser);
+            element = derser;
+            return element;
+        }
+
+        public static JsonElement Remove(this JsonElement element, dynamic key) {
+            var dict = new Dictionary<dynamic, object>();
+            foreach (var item in element.EnumerateObject())
+            {
+                dict.Add(item.Name, item.Value);
+            }
+            dict.Remove(key);
+            var ser = JsonSerializer.Serialize(dict);
+            var derser = JsonSerializer.Deserialize<JsonElement>(ser);
+            element = derser;
+            return element;
+        }
+
+        
+    }
+
     public class RecentBackground
     {
         public string Filename { get; set; }
 
-        public string LoaderBackgroundID { get; set; }
+        public string PersistentBackgroundID { get; set; }
+
+        public string TimestampAddedNanos { get; set; }
 
         public static RecentBackground FromDictionary(Dictionary<string,dynamic> data)
         {
             return new RecentBackground {
                 Filename = data["filename"],
-                LoaderBackgroundID = data["loaderbackgroundid"]
+                PersistentBackgroundID = data["persistentbackgroundid"],
+                TimestampAddedNanos = data["timestampaddednanos"]
             };
         }
 
@@ -23,7 +59,34 @@ namespace WallpaperUI.Cs
             return new RecentBackground
             {
                 Filename = element.GetProperty("filename").GetString()!,
-                LoaderBackgroundID = element.GetProperty("loaderbackgroundid").GetString()!
+                PersistentBackgroundID = element.GetProperty("persistentbackgroundid").GetString()!,
+                TimestampAddedNanos = element.GetProperty("timestampaddednanos").GetString()!
+
+            };
+        }
+    }
+
+    public class RecentColor
+    {
+        public string HexColor { get; set; }
+
+        public string TimestampAddedNanos { get; set; }
+
+        public static RecentColor FromDictionary(Dictionary<string,dynamic> data)
+        {
+            return new RecentColor {
+                HexColor = data["hexcolor"],
+                TimestampAddedNanos = data["timestampaddednanos"]
+            };
+        }
+
+        public static RecentColor FromJsonElement(JsonElement element)
+        {
+            return new RecentColor
+            {
+                HexColor = element.GetProperty("hexcolor").GetString()!,
+                TimestampAddedNanos = element.GetProperty("timestampaddednanos").GetString()!
+
             };
         }
     }

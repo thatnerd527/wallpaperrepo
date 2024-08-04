@@ -639,6 +639,10 @@ video {
   display: none;
 }
 
+.h-0 {
+  height: 0px;
+}
+
 .h-1 {
   height: 0.25rem;
 }
@@ -677,6 +681,10 @@ video {
 
 .h-\[120px\] {
   height: 120px;
+}
+
+.h-\[24px\] {
+  height: 24px;
 }
 
 .h-fit {
@@ -726,6 +734,10 @@ video {
   min-height: 2rem;
 }
 
+.w-0 {
+  width: 0px;
+}
+
 .w-24 {
   width: 6rem;
 }
@@ -740,6 +752,10 @@ video {
 
 .w-\[150px\] {
   width: 150px;
+}
+
+.w-\[24px\] {
+  width: 24px;
 }
 
 .w-full {
@@ -808,12 +824,12 @@ video {
   gap: 0.5rem;
 }
 
-.overflow-hidden {
-  overflow: hidden;
+.gap-\[8px\] {
+  gap: 8px;
 }
 
-.overflow-visible {
-  overflow: visible;
+.overflow-hidden {
+  overflow: hidden;
 }
 
 .overflow-scroll {
@@ -826,6 +842,10 @@ video {
 
 .rounded {
   border-radius: 0.25rem;
+}
+
+.rounded-\[100\%\] {
+  border-radius: 100%;
 }
 
 .rounded-b-lg {
@@ -911,6 +931,10 @@ video {
 
 .p-8 {
   padding: 2rem;
+}
+
+.p-\[2px\] {
+  padding: 2px;
 }
 
 .pr-2 {
@@ -1034,6 +1058,10 @@ body {
   margin: 0;
   /* FIXME: remove this, since we'll make it transparent */
   /* background-color: black; */
+}
+
+.radioinactive {
+  --subsize: 13px;
 }
 
 .navmenu-icon {
@@ -1271,6 +1299,10 @@ code {
   max-height: 0px;
 }
 
+.hover\:border-4:hover {
+  border-width: 4px;
+}
+
 .hover\:border-white:hover {
   --tw-border-opacity: 1;
   border-color: rgb(255 255 255 / var(--tw-border-opacity));
@@ -1293,10 +1325,18 @@ code {
   background-color: rgb(255 255 255 / .08);
 }
 
+.hover\:bg-white\/\[\.25\]:hover {
+  background-color: rgb(255 255 255 / .25);
+}
+
 .hover\:shadow-\[0_0px_0px_1px_rgba\(255\2c 255\2c 255\2c 0\.1\)\]:hover {
   --tw-shadow: 0 0px 0px 1px rgba(255,255,255,0.1);
   --tw-shadow-colored: 0 0px 0px 1px var(--tw-shadow-color);
   box-shadow: var(--tw-ring-offset-shadow, 0 0 #0000), var(--tw-ring-shadow, 0 0 #0000), var(--tw-shadow);
+}
+
+.hover\:radioactive:hover {
+  --subsize: 20px;
 }
 
 .active\:bg-white\/\[\.02\]:active {
@@ -1317,4 +1357,8 @@ code {
 
 .active\:bg-white\/\[\.09\]:active {
   background-color: rgb(255 255 255 / .09);
+}
+
+.active\:bg-white\/\[\.10\]:active {
+  background-color: rgb(255 255 255 / .10);
 }

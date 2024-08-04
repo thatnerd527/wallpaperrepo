@@ -17,6 +17,17 @@ body {
     /* background-color: black; */
 }
 
+.radioinactive {
+    --subsize: 13px;
+}
+
+@layer utilities {
+    .radioactive {
+        --subsize: 20px;
+    }
+}
+
+
 .navmenu-icon {
     display: none;
 }

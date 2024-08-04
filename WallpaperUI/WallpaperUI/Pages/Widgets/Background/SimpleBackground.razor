@@ -69,8 +69,8 @@
                 return@<div class="h-full w-full">
                             <video style="
                                                 object-fit: cover;
-                                    " id="backgroundvideo" class="pointer-events-none h-full w-full">
-            <source src="@($"http://127.0.0.1:{controlPort}/simplebackground?id={uniqueId}")" type="video/webm" />
+                                        " id="backgroundvideo" class="pointer-events-none h-full w-full" src="@($"http://127.0.0.1:{controlPort}/simplebackground?id={uniqueId}")" type="video/webm">
+
                             </video>
                             <script>
                                 var video = document.getElementById('backgroundvideo')

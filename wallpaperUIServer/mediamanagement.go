@@ -39,9 +39,14 @@ func setBackgroundFromCache(w http.ResponseWriter, r *http.Request) {
 			pref := cachedpreferences
 			if _, err := os.Stat(filename); err == nil {
 				path2 := filename
+
 				pref["simplebackground"] = path2
+				addRecentMediaBackground(fmt.Sprint(hashCode(r.URL.Query().Get("filename"))), r.URL.Query().Get("filename"), "")
 				cachedpreferences = pref
+				marshalled, _ := json.Marshal(cachedpreferences)
+				os.WriteFile("preferences.json", marshalled, 0755)
 				fmt.Println("Set simple background to " + path2)
+
 				preferenceschannel.SendMessage(PreferenceUpdate{cachedpreferences, GenerateGUID(), false})
 			} else {
 				log.Println("File not found")
@@ -204,7 +209,7 @@ func LoadAllMediaAsPanels(panelspath string, manifest AddonManifest) ([]Template
 		filename := file.Name()
 		panel := TemplateCustomPanel{}
 		panel.PanelType = FileNameToMediaType(filename)
-		panel.LoaderPanelID = filename + "_panel_" + manifest.Name
+		panel.LoaderPanelID = filename + "_panel_" + manifest.Name + "_" + manifest.ClientID
 		url, err := url.Parse(fmt.Sprintf("http://127.0.0.1:%v",secureport))
 		if err != nil {
 			log.Println(err)
@@ -237,7 +242,7 @@ func LoadAllMediaAsTemplateBackgrounds(backgroundspath string, manifest AddonMan
 		filename := file.Name()
 		background := TemplateCustomBackground{}
 		background.BackgroundType = FileNameToMediaType(filename)
-		background.LoaderBackgroundID = filename + "_background_" + manifest.Name
+		background.LoaderBackgroundID = filename + "_background_" + manifest.Name + "_" + manifest.ClientID
 		url, err := url.Parse(fmt.Sprintf("http://127.0.0.1:%v",secureport))
 		if err != nil {
 			log.Println(err)

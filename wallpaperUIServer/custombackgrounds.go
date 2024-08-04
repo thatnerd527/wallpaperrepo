@@ -261,18 +261,24 @@ func backgroundSystem(w http.ResponseWriter, r *http.Request) {
 				ClientID: clientid,
 				Stop: false,
 			})
+
 			return
 		}
 		decoded := string(msg)
 		parsed := BackgroundDataChangeRequest2{}
 
 		err = json.Unmarshal([]byte(decoded), &parsed)
+
+		if (parsed.NewActiveBackground != "") {
+			addRecentMediaBackground(fmt.Sprint(hashCode(parsed.NewActiveBackground)), "", parsed.NewActiveBackground)
+		}
 		backgroundchangehub.SendMessage(BackgroundDataChangeRequest{
 			NewBackgrounds:  parsed.NewBackgrounds,
 			NewActiveBackground: parsed.NewActiveBackground,
 			ClientID: clientid,
 			Stop: false,
 		})
+
 		if err != nil {
 			log.Println("json:", err)
 			return

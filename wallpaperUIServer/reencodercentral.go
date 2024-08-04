@@ -1,19 +1,23 @@
 package main
 
 import (
+	"encoding/json"
+	"fmt"
 	"net/http"
 	"os"
 	"os/exec"
 	"path"
 	"path/filepath"
 	"syscall"
+	"time"
 )
 
 var encodertochan = make(map[string]chan string)
 
 type RecentBackground struct {
-	CachedPath string `json:"cachedpath"`
-	LoaderBackgroundID string `json:"loaderbackgroundid"`
+	CachedPath             string `json:"cachedpath"`
+	PersistentBackgroundID string `json:"persistentbackgroundid"`
+	TimestampAddedNanos    string  `json:"timestampaddednanos"`
 }
 
 func previewFileHandler(w http.ResponseWriter, r *http.Request) {
@@ -24,31 +28,42 @@ func previewFileHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func addRecentMediaBackground(backgroundid string, filename string, loaderbackgroundid string) {
+func hashCode(s string) int {
+	h := 0
+	for _, char := range s {
+		h = 31*h + int(char)
+	}
+	return h
+}
+
+func addRecentMediaBackground(backgroundid string, filename string, persistentbackgroundid string) {
+	fmt.Println("Addded:" + backgroundid + ", " + filename + ", " + persistentbackgroundid)
 	pref := cachedpreferences
-	if _ , ok := pref["recentbackgrounds"]; !ok {
+	if _, ok := pref["recentbackgrounds"]; !ok {
 		pref["recentbackgrounds"] = make(map[string]map[string]string)
 	}
 	pref["recentbackgrounds"].(map[string]interface{})[backgroundid] = map[string]string{
-		"filename":filename,
-		"loaderbackgroundid":loaderbackgroundid,
+		"filename":               filename,
+		"persistentbackgroundid": persistentbackgroundid,
+		"timestampaddednanos": fmt.Sprint(time.Now().UnixNano()),
 	}
 	cachedpreferences = pref
+	marshalled, _ := json.Marshal(cachedpreferences)
+	os.WriteFile("preferences.json", marshalled, 0755)
 	preferenceschannel.SendMessage(PreferenceUpdate{cachedpreferences, GenerateGUID(), false})
 }
 
 func removeRecentMediaBackground(backgroundid string) {
 	pref := cachedpreferences
-	if _ , ok := pref["recentbackgrounds"]; !ok {
+	if _, ok := pref["recentbackgrounds"]; !ok {
 		return
 	}
 	delete(pref["recentbackgrounds"].(map[string]interface{}), backgroundid)
 	cachedpreferences = pref
+	marshalled, _ := json.Marshal(cachedpreferences)
+	os.WriteFile("preferences.json", marshalled, 0755)
 	preferenceschannel.SendMessage(PreferenceUpdate{cachedpreferences, GenerateGUID(), false})
 }
-
-
-
 
 func reencodeVideoFile(inputfile string, outputfile string, codec string, quality string, stripAudio bool, controlchannel chan string) {
 	// This function is used to reencode video files with ffmpeg
@@ -59,7 +74,7 @@ func reencodeVideoFile(inputfile string, outputfile string, codec string, qualit
 	// Example: reencodeVideoFile("input.mp4", "output.webm", "libvpx-vp9", "good")
 	// The above example will reencode input.mp4 to output.webm using the libvpx-vp9 codec with the good quality setting
 
-	process := exec.Command("tools\\ffmpeg\\bin\\ffmpeg.exe", "-i", inputfile, "-c:v", codec, "-crf", quality, "-b:v", "0", "-profile:v", "0", "-threads", "0","-y")
+	process := exec.Command("tools\\ffmpeg\\bin\\ffmpeg.exe", "-i", inputfile, "-c:v", codec, "-crf", quality, "-b:v", "0", "-profile:v", "0", "-threads", "0", "-y")
 	if stripAudio {
 		process.Args = append(process.Args, "-an")
 	}
@@ -83,7 +98,7 @@ func reencodeVideoFile(inputfile string, outputfile string, codec string, qualit
 	if err != nil {
 		controlchannel <- "error," + err.Error()
 	} else {
-		addRecentMediaBackground(GenerateGUID(), filepath.Base(outputfile), "")
+		addRecentMediaBackground(fmt.Sprint(hashCode(filepath.Base(outputfile))), filepath.Base(outputfile), "")
 		controlchannel <- "done"
 		donechannel <- true
 	}
@@ -91,7 +106,7 @@ func reencodeVideoFile(inputfile string, outputfile string, codec string, qualit
 }
 
 func reencodeImageFile(inputfile string, outputfile string, controlchannel chan string) {
-	process := exec.Command("tools\\imagemagick\\magick.exe",inputfile,"-define","png:compression-filter=5","-define","png:compression-level=9","-define","png:compression-strategy=2",outputfile)
+	process := exec.Command("tools\\imagemagick\\magick.exe", inputfile, "-define", "png:compression-filter=5", "-define", "png:compression-level=9", "-define", "png:compression-strategy=2", outputfile)
 	donechannel := make(chan bool)
 	go func() {
 		select {
@@ -111,7 +126,7 @@ func reencodeImageFile(inputfile string, outputfile string, controlchannel chan 
 	if err != nil {
 		controlchannel <- "error," + err.Error()
 	} else {
-		addRecentMediaBackground(GenerateGUID(), filepath.Base(outputfile), "")
+		addRecentMediaBackground(fmt.Sprint(hashCode(filepath.Base(outputfile))), filepath.Base(outputfile), "")
 		controlchannel <- "done"
 		donechannel <- true
 	}
@@ -120,39 +135,39 @@ func reencodeImageFile(inputfile string, outputfile string, controlchannel chan 
 
 func startReencodingSub(inputfile string, filename string, controlchannel chan string, specifictype string) (string, error) {
 	switch specifictype {
-		case "Video":
-			outpath, err := filepath.Abs(path.Join("result",filename + ".webm"))
-			if err != nil {
-				return "", err
+	case "Video":
+		outpath, err := filepath.Abs(path.Join("result", filename+".webm"))
+		if err != nil {
+			return "", err
+		}
+		go func() {
+			reencodeVideoFile(inputfile, outpath, "libsvtav1", "23", true, controlchannel)
+		}()
+		return outpath, nil
+	case "Image":
+		outpath, err := filepath.Abs(path.Join("result", filename+".png"))
+		if err != nil {
+			return "", err
+		}
+		go func() {
+			reencodeImageFile(inputfile, outpath, controlchannel)
+		}()
+		return outpath, nil
+	default:
+		go func() {
+			controlchannel <- "askuser"
+			specifiedtype := <-controlchannel
+			if specifiedtype == "cancel" {
+				return
 			}
-			go func() {
-				reencodeVideoFile(inputfile, outpath, "libsvtav1", "23", true, controlchannel)
-			}()
-			return outpath, nil
-		case "Image":
-			outpath, err := filepath.Abs(path.Join("result",filename + ".png"))
-			if err != nil {
-				return "", err
+			outpath, error := startReencodingSub(inputfile, filename, controlchannel, specifiedtype)
+			if error != nil {
+				controlchannel <- "error," + error.Error()
+			} else {
+				controlchannel <- outpath
 			}
-			go func() {
-				reencodeImageFile(inputfile, outpath,controlchannel)
-			}()
-			return outpath, nil
-		default:
-			go func() {
-				controlchannel <- "askuser"
-				specifiedtype := <-controlchannel
-				if (specifiedtype == "cancel") {
-					return
-				}
-				outpath, error := startReencodingSub(inputfile,filename, controlchannel, specifiedtype)
-				if error != nil {
-					controlchannel <- "error," + error.Error()
-				} else {
-					controlchannel <- outpath
-				}
-			}()
-			return "", nil
+		}()
+		return "", nil
 	}
 }
 

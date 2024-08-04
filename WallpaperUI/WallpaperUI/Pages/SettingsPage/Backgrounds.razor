@@ -30,8 +30,8 @@
         </div>
     </div>
 </div>
-<div id="contentdiv" class="@(recentBackgroundsOpen ? "opacity-100 duration-200 max-h-max" : "max-h-0 opacity-0 delay-0 duration-0") w-full overflow-visible transition-cardexpand ease-in-out">
-    <div class="bg-white/[.08] mb-[2px] flex h-max min-h-8 w-full flex-row flex-wrap gap-2 p-4" >
+<div id="contentdiv" class="@(recentBackgroundsOpen ? "opacity-100 duration-200 max-h-max" : "max-h-0 opacity-0 delay-0 duration-0") w-full overflow-hidden transition-cardexpand ease-in-out">
+    <div class="bg-white/[.08] mb-[2px] flex h-max min-h-8 w-full flex-row flex-wrap gap-2 p-4">
         <div class="hover:bg-white/[.08] active:bg-white/[.05] transition-all duration-150 ease-in-out cursor-pointer border-2 flex h-24 w-24 flex-col items-center justify-center rounded border-white" @onclick="@(async () => {
         var req = App.Instance.controlPort;
                     var res = new UriBuilder(
@@ -85,6 +85,7 @@
                             App.Instance.preferencesManager.Remove("simplebackground");
                             App.Instance.preferencesManager.Set("simplebackground", resultFile);
                             showEncodingDialog = false;
+                            Home.currentBackground = "";
                             break;
                         default:
                             if (cancelEncoding) {
@@ -101,52 +102,63 @@
     })">
             <FluentIcon Value="@(new Icons.Regular.Size24.Add())" Color="@Color.Neutral" />
         </div>
-        @foreach (var bkg in recentBackgrounds())
+        @foreach (var bkg in recentBackgrounds().OrderByDescending(x => Int64.Parse(x.Value.TimestampAddedNanos)))
         {
-            var guid = Guid.NewGuid().ToString();
-            <div class="hover:bg-white/[.08] active:bg-white/[.05] transition-all duration-150 ease-in-out cursor-pointer flex h-24 w-24 flex-col items-center justify-center rounded overflow-hidden border-transparent border-2 hover:border-white" @onclick="@(async () => {
-                    App.Instance.preferencesManager.Set("simplebackground", "");
-                    var req = App.Instance.controlPort;
-                    var res = new UriBuilder(
-                        new Uri("http://127.0.0.1:" + req + "/setbackgroundfromcache")
-                    );
-                    
-                    res.Query = "filename=" + bkg.Value.Filename;
-                    var result = await client.GetAsync(res.Uri);
-            })">
-                @if (bkg.Value.Filename.EndsWith(".png"))
-                {
-                    <img src="http://127.0.0.1:@(App.Instance.controlPort)/getpreviewfile?filename=@(bkg.Value.Filename)" class="w-full h-full object-cover rounded" />
-                } else if (bkg.Value.Filename.EndsWith(".webm"))
-                {
-                    <div class="h-full w-full">
-                            <video style="
-                                                object-fit: cover;
-                                            " id="@guid" class="pointer-events-none h-full w-full rounded">
-                            <source src="http://127.0.0.1:@(App.Instance.controlPort)/getpreviewfile?filename=@(bkg.Value.Filename)" type="video/webm" />
-                            </video>
-                            <script id="@(guid + "_helper")">
-                            var video = document.getElementById(document.currentScript.id.replaceAll("_helper",""))
-                                video.muted = true;
-                                video.loop = true;
-                                video.play();
-                                console.log(video)
-                            </script>
-                        </div>;
-                }
-            </div>
+           @renderRecentBackgroundItem(bkg);
         }
     </div>
     <div class="bg-white/[.08] mb-[2px] h-12 w-full p-3.5 text-base" style="font-weight: 400; display: flex; flex-direction: row; gap: 10px; align-items: center;">
         From addons
     </div>
     <div class="bg-white/[.08] mb-[2px] flex h-max min-h-8 w-full flex-row flex-wrap gap-2 rounded-b-lg p-4">
-        <div class="border-2 flex h-24 w-24 flex-col items-center justify-center rounded border-white">
-            <FluentIcon Value="@(new Icons.Regular.Size24.Add())" Color="@Color.Neutral" />
-        </div>
-    </div>
-</div>
 
+        @foreach (var bkg in Home.availableBackgrounds)
+        {
+           @renderAvailableBackgroundsItem(bkg);
+        }
+    </div>
+    
+</div>
+<div class="h-7"></div>
+<div style="
+                font-size: 26px;
+                font-weight: 600;
+                        ">
+    Customization
+</div>
+<div class="h-4"></div>
+@Item(
+    @<FluentIcon Value="@(new Icons.Regular.Size24.Color())" Color="Color.Neutral"></FluentIcon>,
+        "Accent color",
+        "Change the color displayed throughout the system.",
+    @<div class="w-full h-full flex flex-row gap-[8px] items-center justify-end">
+        @foreach (var item in recentColors())
+        {
+            @renderRecentColorItem(item.Key, item.Value);
+        }
+        <input type="color" class="opacity-0 w-0 h-0 max-h-0 max-h-0" @ref=@(colorRef) @onchange="(e) => {
+            var color = e.Value;
+            var colorObj = new RecentColor() {
+                HexColor = (string)color,
+                TimestampAddedNanos = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString()
+
+            };
+            Home.AccentColor = (string)color;
+            AddRecentColor(colorObj);
+            while (recentColors().Count > 5)
+            {
+                RemoveOldestRecentColor();
+            }
+        }">
+            
+        </input>
+        <div class="w-[24px] h-[24px] rounded-[100%] overflow-hidden border-2 p-[2px] flex flex-col items-center justify-center hover:bg-white/[.25] active:bg-white/[.10] cursor-pointer transition-all" @onclick="@(async () => {
+            await JS.InvokeVoidAsync("doclick",colorRef);
+        })">
+            <FluentIcon Value="@(new Icons.Regular.Size20.Add())" Color="Color.Neutral"></FluentIcon>
+        </div>
+            </div>
+        )
 
 @* OLD *@
 
@@ -209,6 +221,7 @@
                         case "done":
                             App.Instance.preferencesManager.Remove("simplebackground");
                             App.Instance.preferencesManager.Set("simplebackground", resultFile);
+                            Home.currentBackground = "";
                             showEncodingDialog = false;
                             break;
                         default:
@@ -255,7 +268,7 @@
     {
         <FluentAccordionItem Heading="@item.LoaderBackgroundID" Style="
                         padding: 10px;
-                                            ">
+                                                    ">
             <FluentIcon Value="@(new Icons.Regular.Size24.Wallpaper())" Color="@Color.Neutral" Slot="start" />
 
             <div>Background ID: @item.LoaderBackgroundID</div>
@@ -298,7 +311,7 @@
     {
         <FluentAccordionItem Heading="@item.LoaderBackgroundID" Style="
                         padding: 10px;
-                                                    ">
+                                                            ">
             <FluentIcon Value="@(new Icons.Regular.Size24.Wallpaper())" Color="@Color.Neutral" Slot="start" />
 
             <div>Background ID: @item.LoaderBackgroundID</div>
@@ -414,6 +427,7 @@
                         case "done":
                             App.Instance.preferencesManager.Remove("simplebackground");
                             App.Instance.preferencesManager.Set("simplebackground", resultFile);
+                            Home.currentBackground = "";
                             showEncodingDialog = false;
                             break;
                         default:
@@ -462,6 +476,7 @@
                         case "done":
                             App.Instance.preferencesManager.Remove("simplebackground");
                             App.Instance.preferencesManager.Set("simplebackground", resultFile);
+                            Home.currentBackground = "";
                             showEncodingDialog = false;
                             break;
                         default:
@@ -508,6 +523,8 @@
 @inject IHttpClientFactory hcf
 @inject IDialogService DialogService
 @inject IJSRuntime JS
+@using System.Text.Json;
+@using System.Text.Json.Nodes;
 @code {
     private HttpClient client = null;
     public static Backgrounds Instance = null;
@@ -520,31 +537,232 @@
     private bool cancelEncoding = false;
     private bool encodingErrorInPrestart = false;
     private bool recentBackgroundsOpen = false;
+    private ElementReference colorRef;
 
-    private Dictionary<string,RecentBackground> recentBackgrounds()
+    private Dictionary<string, RecentBackground> recentBackgrounds()
     {
         if (App.Instance.preferencesManager.GetPreferences().TryGetValue("recentbackgrounds", out var bkgs))
         {
             JsonElement elem = bkgs;
             return elem.EnumerateObject()
-            .Select(x => new KeyValuePair<string, RecentBackground>(x.Name,RecentBackground.FromJsonElement(x.Value)))
+            .Select(x => new KeyValuePair<string, RecentBackground>(x.Name, RecentBackground.FromJsonElement(x.Value)))
             .ToDictionary(x => x.Key, x => x.Value);
-        } else
+        }
+        else
         {
             return [];
         }
     }
+
+    private Dictionary<string, RecentColor> recentColors()
+    {
+        if (App.Instance.preferencesManager.GetPreferences().TryGetValue("recentcolors", out var colors))
+        {
+            JsonElement elem = colors;
+            return elem.EnumerateObject()
+            .Select(x => new KeyValuePair<string, RecentColor>(x.Name, RecentColor.FromJsonElement(x.Value)))
+            .ToDictionary(x => x.Key, x => x.Value);
+        }
+        else
+        {
+            return [];
+        }
+    }
+
+    private void AddRecentColor(RecentColor color)
+    {
+        var element = App.Instance.preferencesManager.GetOrDefault<JsonElement>("recentcolors", new JsonElement());
+
+
+        var subelement = new JsonObject();
+
+        subelement.Add("hexcolor", color.HexColor);
+        subelement.Add("timestampaddednanos", color.TimestampAddedNanos);
+        element = element.Set(color.HexColor.GetHashCode(), subelement);
+        App.Instance.preferencesManager.Set("recentcolors", element);
+    }
+
+    private void RemoveOldestRecentColor()
+    {
+        var element = App.Instance.preferencesManager.GetOrDefault<JsonElement>("recentcolors", new JsonElement());
+        var key = element.EnumerateObject().OrderBy(x => Int64.Parse(x.Value.GetProperty("timestampaddednanos").GetString())).First().Name;
+        element = element.Remove(key);
+        App.Instance.preferencesManager.Set("recentcolors", element);
+    }
+
+    
 
     protected override void OnInitialized()
     {
         Instance = this;
         client = hcf.CreateClient();
         client.Timeout = Timeout.InfiniteTimeSpan;
+        App.Instance.preferencesManager.AddChangeHandler(x =>
+        {
+            Refresh();
+            return x;
+        });
     }
 
     public void Refresh()
     {
         StateHasChanged();
+    }
+
+    protected RenderFragment Item(RenderFragment icon, string header, string caption, RenderFragment button)
+    {
+        return @<div>
+        <div class="bg-white/[.05] flex min-h-16 w-full flex-row items-center rounded">
+            <div class="w-5"></div>
+            @icon
+            <div class="w-5"></div>
+            <div class="flex w-full flex-row">
+                <div class="flex h-full w-full flex-col items-center justify-start">
+                    <div class="w-full font-normal">
+                        @header
+                    </div>
+                    <div class="text-white/75 w-full text-xs font-light">
+                        @caption
+                    </div>
+                </div>
+                <div class="flex w-full flex-row items-center justify-end">
+                    @button
+                    <div class="w-4"></div>
+                </div>
+            </div>
+        </div>
+        <div class="h-1"></div>
+    </div>;
+    }
+
+    private RenderFragment renderAvailableBackgroundsItem(RuntimeCustomBackground runtimeCustomBackground)
+    {
+        var guid = Guid.NewGuid().ToString();
+        return @<div class="hover:bg-white/[.08] active:bg-white/[.05] transition-all duration-150 ease-in-out cursor-pointer flex h-24 w-24 flex-col items-center justify-center rounded overflow-hidden  border-2 @(new Func<String>(() => {
+           
+            var background = Home.backgrounds.FirstOrDefault(x => x.PersistentBackgroundID == Home.currentBackground,null);
+            if (background == null) {
+                return "border-transparent hover:border-white";
+            }
+            var comparison = background.LoaderBackgroundID == runtimeCustomBackground.LoaderBackgroundID;
+            return comparison ? "border-white" : "border-transparent hover:border-white";
+        }).Invoke())" @onclick="@(async () => {
+                            Home.Instance.SetBackground(runtimeCustomBackground.LoaderBackgroundID);
+                    })">
+                        @{
+                            switch (runtimeCustomBackground.BackgroundType)
+                            {
+                                case "Image":
+                                    <img src="@(runtimeCustomBackground.BackgroundContent)" class="w-full h-full object-cover rounded" />
+                                    break;
+                                case "Video":
+                                    <div class="h-full w-full">
+                                        <video style="object-fit: cover;" id="@guid" class="pointer-events-none h-full w-full rounded" src="@(runtimeCustomBackground.BackgroundContent)" type="video/webm">
+                    <!--<source src="@(runtimeCustomBackground.BackgroundContent)" type="video/webm" />-->
+                                        </video>
+                                        <script id="@(guid + "_helper")">
+                                            var video = document.getElementById(document.currentScript.id.replaceAll("_helper", ""))
+                                            video.muted = true;
+                                            video.loop = true;
+                                            video.play();
+                                            console.log(video)
+                                        </script>
+                                    </div>
+                                    break;
+                                case "Embedded":
+                                    <div>unrendereable</div>
+                                    break;
+                            }
+                        }
+
+                    </div>;
+    }
+
+    private RenderFragment renderRecentBackgroundItem(KeyValuePair<string, RecentBackground> bkg)
+    {
+        var guid = Guid.NewGuid().ToString();
+        return @<div class="hover:bg-white/[.08] active:bg-white/[.05] transition-all duration-150 ease-in-out cursor-pointer flex h-24 w-24 flex-col items-center justify-center rounded overflow-hidden border-2 @(new Func<String>(() => {
+            if (Home.Instance.IsSimpleBackground()) {
+                var processed =  Path.GetFileName(Home.Instance.GetCurrentBackground().Replace("\\","/"));
+                var comparison = bkg.Value.Filename == processed;
+                return comparison ? "border-white" : "border-transparent hover:border-white";
+            } else {
+                var comparison = bkg.Value.PersistentBackgroundID == Home.Instance.GetCurrentBackground();
+                return comparison ? "border-white" : "border-transparent hover:border-white";
+            }
+        }).Invoke())" @onclick="@(async () => {
+                    if (bkg.Value.Filename.Length == 0) {
+                        Home.Instance.SetBackgroundFromPersistent(bkg.Value.PersistentBackgroundID);
+                    } else {
+                        var req = App.Instance.controlPort;
+                        var res = new UriBuilder(
+                            new Uri("http://127.0.0.1:" + req + "/setbackgroundfromcache")
+                        );
+
+                        res.Query = "filename=" + bkg.Value.Filename;
+                        var result = await client.GetAsync(res.Uri);
+                        Home.currentBackground = "";
+                        App.SaveBackgroundData(Home.backgrounds);
+                    }
+            })">
+        @if(bkg.Value.Filename.Length == 0) {
+
+            var background = Home.backgrounds.FirstOrDefault(x => x.PersistentBackgroundID == bkg.Value.PersistentBackgroundID);
+            if (background == null) {
+                <div>Background not found</div>
+
+            } else if (background.BackgroundType == "Image")
+            {
+                <img src="@(background.BackgroundContent)" class="w-full h-full object-cover rounded" />
+            }
+            else if (background.BackgroundType == "Video")
+            {
+                <div class="h-full w-full">
+                    <video style="object-fit: cover;" id="@guid" class="pointer-events-none h-full w-full rounded" src="@(background.BackgroundContent)" type="video/webm">
+                        
+                    </video>
+                    <script id="@(guid + "_helper")">
+                        var video = document.getElementById(document.currentScript.id.replaceAll("_helper", ""))
+                        video.muted = true;
+                        video.loop = true;
+                        video.play();
+                        console.log(video)
+                    </script>
+                </div>;
+            }
+
+    } else {
+        if (bkg.Value.Filename.EndsWith(".png"))
+        {
+            <img src="http://127.0.0.1:@(App.Instance.controlPort)/getpreviewfile?filename=@(bkg.Value.Filename)" class="w-full h-full object-cover rounded" />
+        }
+        else if (bkg.Value.Filename.EndsWith(".webm"))
+        {
+            <div class="h-full w-full">
+            <video style="object-fit: cover;" id="@guid" class="pointer-events-none h-full w-full rounded" src="http://127.0.0.1:@(App.Instance.controlPort)/getpreviewfile?filename=@(bkg.Value.Filename)" type="video/webm">
+                    
+                </video>
+                <script id="@(guid + "_helper")">
+                    var video = document.getElementById(document.currentScript.id.replaceAll("_helper", ""))
+                    video.muted = true;
+                    video.loop = true;
+                    video.play();
+                    console.log(video)
+                </script>
+            </div>
+        ;
+        }
+    }
+    </div>
+    ;
+    }
+
+    public RenderFragment renderRecentColorItem(string colorid, RecentColor color)
+    {
+        return@<div class="w-[24px] h-[24px] rounded-[100%] overflow-hidden border-2 radioinactive hover:radioactive hover:border-4 cursor-pointer flex flex-col items-center justify-center transition-all duration-150">
+        <div style="border-radius: 100%; overflow: hidden; background-color: @(color.HexColor); min-height: var(--subsize); min-width: var(--subsize);" class="transition-all ease-in-out duration-150">
+            </div>
+        </div>;
     }
 
     private void OnDismiss()

@@ -38,7 +38,9 @@
                 return@<div class="h-full w-full">
                     <video style="
                         object-fit: cover;
-            " id="backgroundvideo" class="pointer-events-none h-full w-full"><source src="@runtimeCustomBackground.BackgroundContent" type="video/mp4" /></video>
+                " id="backgroundvideo" class="pointer-events-none h-full w-full" src="@runtimeCustomBackground.BackgroundContent" type="video/mp4">
+            
+        </video>
                     <script>
                         var video = document.getElementById('backgroundvideo')
                         video.muted = true;

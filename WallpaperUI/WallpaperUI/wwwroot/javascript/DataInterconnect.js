@@ -28,6 +28,11 @@ window.testanimation = function () {
     });
 }
 
+window.doclick = function (element) {
+    element.click();
+   }
+
+
 console.log("Registered hooks")
 
 window.mode = function () {

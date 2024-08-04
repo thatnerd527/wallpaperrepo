@@ -60,63 +60,64 @@
 @if (mode == "wallpaper")
 {
 
-    <div style="height: 100%; background-color: transparent; overflow: clip" class="text-white" >
+    <div style="height: 100%; background-color: transparent; overflow: clip" class="text-white">
         <div class="absolute h-full w-full object-cover">
             @RenderBackgroundInternals()
-         </div>
-    <img src="./assets/background.png" class="pointer-events-none absolute h-full w-full object-cover" style="z-index: -1"/>
-        
-    <div class="card absolute bottom-0 m-4 mb-16 p-4" style="
+        </div>
+        <img src="./assets/background.png" class="pointer-events-none absolute h-full w-full object-cover" style="z-index: -1" />
+
+        <div class="card absolute bottom-0 m-4 mb-16 p-4" style="
       width: 256px;
       height: 80px;
       right: 0px;
       display: @((loading) ? "block" : "none");
-    ">
-        <div class="font-bold">Loading wallpaper..</div>
-        <div class="mt-4">
+        ">
+            <div class="font-bold">Loading wallpaper..</div>
+            <div class="mt-4">
+            </div>
+            <FluentProgress></FluentProgress>
         </div>
-        <FluentProgress></FluentProgress>
-    </div>
-    <div class="absolute top-0 m-4 p-4" style="
+        <div class="absolute top-0 m-4 p-4" style="
       width: 256px;
       height: 80px;
       right: 0px;
       display: none;
-    ">
-        <Card IsDraggable="false" IsResizable="false">
-            <div class="flex h-full w-full flex-col items-center" style="
+        ">
+            <Card IsDraggable="false" IsResizable="false">
+                <div class="flex h-full w-full flex-col items-center" style="
                 overflow: overlay
-            ">
-                <h2 style="
+                ">
+                    <h2 style="
                     font-size: 1.5rem;
                     font-weight: 600;
                     color: white;
                     margin-bottom: 1rem;
                     margin-top: 1rem;
-                ">Add panels</h2>
-                <FluentListbox TOption="string" ValueChanged="@(e => listboxValue = e)" Height="100%" Width="100%" Style="
+                    ">
+                        Add panels
+                    </h2>
+                    <FluentListbox TOption="string" ValueChanged="@(e => listboxValue = e)" Height="100%" Width="100%" Style="
                     overflow: clip
-">
-                    @foreach (var panel in availablePanels)
-                    {
-                        <FluentOption Value="@panel.LoaderPanelID">"@panel.LoaderPanelID" Created By: @panel.ClientID</FluentOption>
-                        <div class="h-2"></div>
-                    }
-                    
-                </FluentListbox>
-                <div class="h-8">
-                    
-                </div>
-                <FluentButton IconStart="@(new Icons.Regular.Size16.Add())" Style="
+    ">
+                        @foreach (var panel in availablePanels)
+                        {
+                            <FluentOption Value="@panel.LoaderPanelID">"@panel.LoaderPanelID" Created By: @panel.ClientID</FluentOption>
+                            <div class="h-2"></div>
+                        }
+
+                    </FluentListbox>
+                    <div class="h-8">
+                    </div>
+                    <FluentButton IconStart="@(new Icons.Regular.Size16.Add())" Style="
                     min-height: 32px;
-                " Disabled="!availablePanels.Select(x => x.LoaderPanelID).Contains(listboxValue)" @onclick="() => {
+                    " Disabled="!availablePanels.Select(x => x.LoaderPanelID).Contains(listboxValue)" @onclick="() => {
                         AddPanel(listboxValue);
                 }">
-                    Add
-                </FluentButton>
-            </div>
-        </Card>
-    </div>
+                        Add
+                    </FluentButton>
+                </div>
+            </Card>
+        </div>
         <div style="
         width: 100vw;
         height: 100vh;
@@ -124,14 +125,14 @@
         position: absolute;
         top: 0px;
 left: 0px;
-    ">
+        ">
             @foreach (var panel in panels)
             {
 
                 @RenderPanel(panel.PersistentPanelID)
             }
         </div>
-    <div style="
+        <div style="
         position: absolute;
         bottom: 0px;
         right: 0px;
@@ -142,18 +143,18 @@ left: 0px;
         margin-bottom: 64px;
         padding: 8px;
         display: none;
-    " class="card">
-        <FluentButton IconEnd="@(new Icons.Regular.Size16.Settings())"
-                      Title="Settings" 
-                      @onclick="OpenSettings"
-                      />
+        " class="card">
+            <FluentButton IconEnd="@(new Icons.Regular.Size16.Settings())"
+                          Title="Settings"
+                          @onclick="OpenSettings" />
+        </div>
+
+
+
     </div>
-    
 
-    
-</div>
-
-} else if (mode == "settings")
+}
+else if (mode == "settings")
 {
     <div style="
         position: absolute;
@@ -161,11 +162,11 @@ left: 0px;
         left: 0px;
         width: 100vw;
         height: 100vh;
-    ">
+        ">
         <Settings home="this" />
     </div>
 }
-
+@using System.Text.Json;
 @code {
     string? listboxValue = "";
     public static List<RuntimeCustomPanel> availablePanels = new List<RuntimeCustomPanel>();
@@ -206,6 +207,12 @@ left: 0px;
 
     }
 
+    public static string AccentColor
+    {
+        get => App.Instance.preferencesManager.GetOrDefault("accentcolor", "#0078D4");
+        set => App.Instance.preferencesManager.Set("accentcolor", value);
+    }
+
     private async void ReloadUI()
     {
         await JS.InvokeVoidAsync("reloadui");
@@ -228,6 +235,47 @@ left: 0px;
         else
         {
             return @<SimpleBackground />;
+        }
+    }
+
+    public string GetCurrentBackground()
+    {
+        dynamic data = App.Instance.preferencesManager.GetOrDefault2("simplebackground", false);
+        if (data is bool && !data)
+        {
+            return currentBackground;
+        }
+        else
+        {
+            try
+            {
+                return data.GetString();
+            }
+            catch (Exception e)
+            {
+                try
+                {
+                    return data.GetBoolean() ? "simple" : currentBackground;
+                }
+                catch (Exception e2)
+                {
+                    return (string)data;
+                }
+            }
+
+        }
+    }
+
+    public bool IsSimpleBackground()
+    {
+        dynamic data = App.Instance.preferencesManager.GetOrDefault2("simplebackground", false);
+        if (data is bool && !data)
+        {
+            return false;
+        }
+        else
+        {
+            return true;
         }
     }
 
@@ -266,7 +314,7 @@ left: 0px;
             panels.Remove(panel);
             App.SavePanelData(panels);
             StateHasChanged();
-        }"/>
+        }" />
     ;
     }
 
@@ -297,15 +345,26 @@ left: 0px;
 
     public void SetBackground(string backgroundID)
     {
+        App.Instance.preferencesManager.Remove("simplebackground");
         if (backgrounds.Any(x => x.LoaderBackgroundID == backgroundID))
         {
             currentBackground = backgrounds.FirstOrDefault(x => x.LoaderBackgroundID == backgroundID).PersistentBackgroundID;
-        } else
+        }
+        else
         {
             var background = availableBackgrounds.FirstOrDefault(x => x.LoaderBackgroundID == backgroundID).Cloned();
             backgrounds.Add(background);
             currentBackground = background.PersistentBackgroundID;
+
         }
+        App.SaveBackgroundData(backgrounds);
+        StateHasChanged();
+    }
+
+    public void SetBackgroundFromPersistent(string backgroundID)
+    {
+        App.Instance.preferencesManager.Remove("simplebackground");
+        currentBackground = backgroundID;
         App.SaveBackgroundData(backgrounds);
         StateHasChanged();
     }
