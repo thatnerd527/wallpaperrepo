@@ -41,6 +41,7 @@
     "electron-squirrel-startup": "^1.0.1",
     "lodash-es": "^4.17.21",
     "vue": "^3.4.21",
+    "wallpaperpopupapp": "file:",
     "ws": "^8.17.0"
   },
   "type": "module"

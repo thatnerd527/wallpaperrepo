@@ -5,4 +5,4 @@
     "description": "This is a test addon",
     "author": "Test",
     "bootstrapExecutable": "addontemplate.exe"
-}
+} 

@@ -10,7 +10,6 @@ import (
 	"os"
 	"path"
 	"time"
-
 	"path/filepath"
 
 	"github.com/elliotchance/pie/v2"
@@ -173,6 +172,7 @@ func BootstrapAddon(foldername string, manifest AddonManifest, donecallback func
 		log.Println(err)
 		return nil, err
 	}
+	fmt.Println("HIT")
 	RuntimeAddons = append(RuntimeAddons, ref)
 	go TryToConnectToAddon(ref, func(err error) {
 		if err != nil {

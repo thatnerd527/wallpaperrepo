@@ -80,14 +80,20 @@
 </div>
 <div class="h-4"></div>
 
-<div class="bg-white/[.05] flex min-h-16 w-full cursor-pointer items-center rounded p-4 transition duration-100 hover:bg-white/[.08] hover:shadow-[0_0px_0px_1px_rgba(255,255,255,0.1)] active:bg-white/[.03]" @onclick="async () => {
+<div class="bg-white/[.05] flex min-h-16 w-full cursor-pointer items-center rounded p-4 transition duration-100 hover:bg-white/[.08] hover:shadow-[0_0px_0px_1px_rgba(255,255,255,0.1)] active:bg-white/[.03]" @onclick="@(async () => {
     // FIXME: Verify this if
+            var res = new UriBuilder(
+                        new Uri($"http://127.0.0.1:{App.Instance.controlPort}/autostart")
+                    );
+            res.Query = autoStart ? "?enable=true" : "";
+            var request = await client.PostAsync(res.Uri, null);
+            await GetStatus();
     autoStart = !autoStart;
-}">
+})">
     <div class="w-full">
         Enable Auto start on user login
     </div>
-    <div class="flex w-full flex-row justify-end">
+    <div class="flex flex-row justify-end">
         @String.Format(autoStart ? "On" : "Off")
         <FluentSwitch ValueChanged="@(async (v) => {
             var res = new UriBuilder(
@@ -109,7 +115,7 @@
     <div class="w-full">
         Enable Debug
     </div>
-    <div class="flex w-full flex-row justify-end">
+    <div class="flex flex-row justify-end">
         @String.Format(enableDebug ? "On" : "Off")
         <FluentSwitch Value="enableDebug"></FluentSwitch>
     </div>
@@ -171,7 +177,7 @@
                     @caption
                 </div>
             </div>
-            <div class="flex w-full flex-row items-center justify-end">
+            <div class="flex flex-row items-center justify-end">
                 @button
                 <div class="w-4"></div>
             </div>

@@ -225,7 +225,7 @@ func redirectHandler(w http.ResponseWriter, r *http.Request) {
 
 func fileHandler(w http.ResponseWriter, r *http.Request) {
 	if (!r.URL.Query().Has("embedkey") || r.URL.Query().Get("embedkey") != embedKey) {
-		fmt.Println("EXPECTED: ", embedKey + " GOT: ", r.URL.Query().Get("embedkey"))
+		fmt.Println("EXPECTED: " + embedKey + " GOT: " + r.URL.Query().Get("embedkey"))
 		w.Header().Set("Content-Security-Policy", "frame-ancestors 'none'")
 	}
 	w.Header().Set("Cache-Control", "no-store")

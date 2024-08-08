@@ -1,0 +1,37 @@
+syntax = "proto3";
+option go_package = "wallpaperuiserver/protocol";
+option csharp_namespace = "Wallpaper.CommonLanguage";
+message PanelSystemInitialResponse {
+    repeated BasePanel templatePanels = 1;
+    repeated RuntimePanel instancedButBlankPanels = 2;
+    repeated RuntimePanel instancedPanelsFromStorage = 3;
+    repeated RuntimePanel deletedInstancedPanels = 4; // This field represents panels that have been attempted to be loaded by the system from the storage file, but have been deleted because it has not been found in any add-ons.
+}
+
+message BasePanel {
+    string PanelType = 1;
+    string PanelTitle = 2;
+    string PanelContent = 3;
+    int32 PanelRecommendedWidth = 4;
+    int32 PanelRecommendedHeight = 5;
+    int32 PanelMinWidth = 6;
+    int32 PanelMinHeight = 7;
+    int32 PanelMaxWidth = 8;
+    int32 PanelMaxHeight = 9;
+    int32 PanelRecommendedX = 10;
+    int32 PanelRecommendedY = 11;
+
+
+    string DefaultData = 12;
+    string PanelIcon = 13;
+    string AppClientID = 14;
+    string FixedPanelID = 15;
+}
+
+message RuntimePanel {
+    BasePanel basePanel = 1;
+    string PersistentData = 2;
+    string UniquePanelID = 3;
+    int32 ControlPort = 4;
+    bool Deleted = 5;
+}

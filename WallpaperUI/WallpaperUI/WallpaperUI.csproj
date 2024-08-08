@@ -22,6 +22,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <PackageReference Include="Google.Protobuf" Version="3.27.3" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" Version="8.*-*" />
     <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" Version="8.*-*" PrivateAssets="all" />
     <PackageReference Include="Microsoft.FluentUI.AspNetCore.Components" Version="4.*-* " />
@@ -32,6 +33,9 @@
   </Target>
   <ItemGroup>
     <None Include="Pages\Widgets\Background\SimpleBackground.razor" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Cs\Protocol\" />
   </ItemGroup>
 
 </Project>

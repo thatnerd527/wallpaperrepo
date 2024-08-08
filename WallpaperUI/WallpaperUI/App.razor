@@ -17,6 +17,7 @@
     <style>
         * {
             user-select: none;
+            pointer-events: none;
         }
     </style>
 }
@@ -116,9 +117,9 @@
         JsonElement result = JsonSerializer.Deserialize<JsonElement>(data)!;
         var lastActiveAddons = result.EnumerateArray().Select(x =>
     {
-        return AddonManifest.FromJsonElement(x);
-    });
-        Home.addonManifests = lastActiveAddons.ToList();
+    return AddonManifest.FromJsonElement(x);
+    }).ToList();
+        Home.addonManifests = lastActiveAddons;
         Home.Instance.UpdatePanelData();
         if (Addons.Instance != null)
         {

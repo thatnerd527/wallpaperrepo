@@ -95,7 +95,7 @@
     [Parameter]
     public Home home { get; set; }
 
-    public string screen = "addons";
+    public string screen = "backgrounds";
 
     string activeId = "accordion-1";
 
@@ -103,11 +103,19 @@
 
     private HttpClient client = null;
 
+    public static Settings Instance = null;
+
     private Dictionary<string, Boolean> menuOpen = new Dictionary<string, Boolean>();
 
     protected override void OnInitialized()
     {
         client = hcf.CreateClient();
+        Instance = this;
+    }
+
+    public void Refresh()
+    {
+        StateHasChanged();
     }
 
     private void HandleOnAccordionItemChange(FluentAccordionItem item)

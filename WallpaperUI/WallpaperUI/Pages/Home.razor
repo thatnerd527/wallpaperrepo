@@ -126,10 +126,14 @@
         top: 0px;
 left: 0px;
         ">
-            @foreach (var panel in panels)
-            {
+            
+            @{
+                var filtered = panels.Where(x => !PanelsToSkip.Contains(x.LoaderPanelID));
+                @foreach (var panel in filtered)
+                {
 
-                @RenderPanel(panel.PersistentPanelID)
+                    @RenderPanel(panel.PersistentPanelID)
+                }
             }
         </div>
         <div style="
@@ -167,6 +171,7 @@ else if (mode == "settings")
     </div>
 }
 @using System.Text.Json;
+@using System.Text.Json.Nodes;
 @code {
     string? listboxValue = "";
     public static List<RuntimeCustomPanel> availablePanels = new List<RuntimeCustomPanel>();
@@ -211,6 +216,29 @@ else if (mode == "settings")
     {
         get => App.Instance.preferencesManager.GetOrDefault("accentcolor", "#0078D4");
         set => App.Instance.preferencesManager.Set("accentcolor", value);
+    }
+
+    public static List<string> PanelsToSkip
+    {
+        get {
+            var temp = App.Instance.preferencesManager.GetOrDefault("panelstoskip", new JsonElement());
+            if (temp.ValueKind == JsonValueKind.Undefined)
+            {
+                return new List<string>();
+            }
+            return temp.EnumerateArray().Select(x => x.GetString()).ToList();
+        }
+        set
+        {
+            var temp = new JsonArray();
+            foreach (var item in value)
+            {
+                temp.Add(item);
+            }
+            var serialized = JsonSerializer.Serialize(temp);
+            var deserialized = JsonSerializer.Deserialize<JsonElement>(serialized);
+            App.Instance.preferencesManager.Set("panelstoskip", deserialized);
+        }
     }
 
     private async void ReloadUI()

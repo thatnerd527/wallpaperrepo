@@ -1,0 +1,28 @@
+
+syntax = "proto3";
+option go_package = "wallpaperuiserver/protocol";
+option csharp_namespace = "Wallpaper.CommonLanguage";
+
+message RestartIPCMessage {
+    enum MessageType {
+        RESTART = 0;
+    }
+    MessageType type = 1;
+}
+
+message AutoStart {
+    enum MessageType {
+        DISABLE = 0;
+        ENABLE = 1;
+    }
+    MessageType type = 1;
+}
+
+message AutoStartResponse {
+    enum MessageType {
+        DISABLE = 0;
+        ENABLE = 1;
+    }
+    MessageType type = 1;
+    bool success = 2;
+}

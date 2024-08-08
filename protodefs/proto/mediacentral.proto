@@ -1,0 +1,27 @@
+syntax = "proto3";
+option go_package = "wallpaperuiserver/protocol";
+option csharp_namespace = "Wallpaper.CommonLanguage";
+
+message EncodingTicket {
+    enum ActionType {
+        STOP = 0;
+        WAIT = 1;
+    }
+
+    string TicketID = 1;
+}
+
+message EncodingTicketResponse {
+    enum ResponseType {
+        SUCCESS = 0;
+        FAILURE = 1;
+        ASKUSER = 2;
+    }
+
+    ResponseType responseType = 1;
+    optional string errorMessage = 2;
+}
+
+message GetPreviewFile {
+    string FilePath = 1;
+}

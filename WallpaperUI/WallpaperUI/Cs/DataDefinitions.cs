@@ -7,6 +7,14 @@ namespace WallpaperUI.Cs
 
     public static class Extensions
     {
+        public static JsonElement BlankObject(this JsonElement element)
+        {
+            var dict = new Dictionary<dynamic, object>();
+            var ser = JsonSerializer.Serialize(dict);
+            var derser = JsonSerializer.Deserialize<JsonElement>(ser);
+            element = derser;
+            return element;
+        }
         public static JsonElement Set(this JsonElement element, dynamic key, JsonObject value)
         {
             var dict = new Dictionary<dynamic, object>();

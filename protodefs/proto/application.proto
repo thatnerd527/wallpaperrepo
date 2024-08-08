@@ -1,0 +1,11 @@
+syntax = "proto3";
+option go_package = "wallpaperuiserver/protocol";
+option csharp_namespace = "Wallpaper.CommonLanguage";
+import "popupapp.proto";
+message IPCRequests {
+  oneof message {
+    PopupRequest popupRequest = 1;
+    InputRequest inputRequest = 2;
+    ShutdownRequest shutdownRequest = 3;
+  }
+}

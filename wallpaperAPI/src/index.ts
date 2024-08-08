@@ -9,11 +9,10 @@ import { StorageManager } from "./StorageManager";
 import { StorageDummy } from "./endpoints/storage";
 import { SharingDummy } from "./endpoints/sharing";
 import { PanelDummy } from "./endpoints/panel";
-
+import * as test from "./protocols/protocol"
 import * as Type from "./types";
 import { BackgroundDummy } from "./endpoints/background";
 import { AddonDummy } from "./endpoints/addon";
-
 Environment.controlPort =
   new URL(window.location.href).searchParams.get("controlPort") == null
     ? 8080
@@ -25,7 +24,6 @@ PopupDummy();
 PanelDummy();
 BackgroundDummy();
 AddonDummy();
-
 console.log(Environment.endpointRegister.generateClientSDK());
 
 

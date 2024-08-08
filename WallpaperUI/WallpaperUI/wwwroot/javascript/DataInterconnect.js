@@ -85,6 +85,12 @@ function setupPanelConnection() {
                 resolve();
             } else {
                 DotNet.invokeMethod("WallpaperUI", "UpdatePanelData", event.data);
+                fetch("http://localhost:" + controlPort + "/addons").then(x => {
+                    x.text().then(y => {
+
+                        DotNet.invokeMethod("WallpaperUI", "UpdateAddonData", y);
+                    })
+                });
             }
         });
         panelsystem.addEventListener("error", function (event) {
@@ -136,6 +142,12 @@ function setupBackgroundConnection() {
                 resolve();
             } else {
                 DotNet.invokeMethod("WallpaperUI", "UpdateBackgroundData", event.data);
+                fetch("http://localhost:" + controlPort + "/addons").then(x => {
+                    x.text().then(y => {
+
+                        DotNet.invokeMethod("WallpaperUI", "UpdateAddonData", y);
+                    })
+                });
             }
         });
         backgroundsystem.addEventListener("error", function (event) {
@@ -298,6 +310,19 @@ if (controlPort == null) {
     window.dotnetready = function () {
         DotNet.invokeMethod("WallpaperUI", "PassControlPort", Number.parseInt(controlPort));
         setupBackgroundConnection().then(() => {
+            console.log("12345")
+            fetch("http://localhost:" + controlPort + "/addons").then(x => {
+                x.text().then(y => {
+
+                    DotNet.invokeMethod("WallpaperUI", "UpdateAddonData", y);
+                })
+            });
+            fetch("http://localhost:" + controlPort + "/disabledaddons").then(x => {
+                x.text().then(y => {
+
+                    DotNet.invokeMethod("WallpaperUI", "UpdateDisabledAddonData", y);
+                })
+            });
             setupPanelConnection().then(() => {
                 setupPreferencesConnection().then(() => {
                     setupRestartConnection();
@@ -306,18 +331,7 @@ if (controlPort == null) {
         })
         
 
-        fetch("http://localhost:" + controlPort + "/addons").then(x => {
-            x.text().then(y => {
-
-                DotNet.invokeMethod("WallpaperUI", "UpdateAddonData",y);
-            })
-        });
-        fetch("http://localhost:" + controlPort + "/disabledaddons").then(x => {
-            x.text().then(y => {
-
-                DotNet.invokeMethod("WallpaperUI", "UpdateDisabledAddonData", y);
-            })
-        });
+        
         window.top.postMessage("ready", "*");
     }
 

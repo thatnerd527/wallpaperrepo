@@ -61,3 +61,13 @@ wallpaperSetup.exe
 /remotion-fork/deptest
 /remotion-fork/packages/core/.history
 /remotion-fork/packages/player/.history
+/wallpaperUIServer/node_modules
+/protodefs/.history
+/tools/pbjs/node_modules
+wallpaperSetup.zip
+/WallpaperUI/WallpaperUI/Cs/Protocol
+/WallpaperPopupApp/src/protocol
+/wallpaperAPI/src/protocols
+/protodefs/proto/builtgo
+/protodefs/proto/builtcs
+/tools/pbjs/result

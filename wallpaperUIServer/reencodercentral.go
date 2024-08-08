@@ -40,7 +40,7 @@ func addRecentMediaBackground(backgroundid string, filename string, persistentba
 	fmt.Println("Addded:" + backgroundid + ", " + filename + ", " + persistentbackgroundid)
 	pref := cachedpreferences
 	if _, ok := pref["recentbackgrounds"]; !ok {
-		pref["recentbackgrounds"] = make(map[string]map[string]string)
+		pref["recentbackgrounds"] = make(map[string]interface{})
 	}
 	pref["recentbackgrounds"].(map[string]interface{})[backgroundid] = map[string]string{
 		"filename":               filename,

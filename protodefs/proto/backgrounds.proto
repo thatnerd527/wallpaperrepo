@@ -1,0 +1,59 @@
+syntax = "proto3";
+option go_package = "wallpaperuiserver/protocol";
+option csharp_namespace = "Wallpaper.CommonLanguage";
+
+message BackgroundSystemInitialResponse {
+    repeated BaseBackground templateBackgrounds = 1;
+    repeated RuntimeBackground instancedButBlankBackgrounds = 2;
+    repeated RuntimeBackground instancedBackgroundsFromStorage = 3;
+    string LastActiveBackgroundID = 4;
+    repeated RuntimeBackground deletedInstancedBackgrounds = 5; // This field represents backgrounds that have been attempted to be loaded by the system from the storage file, but have been deleted because it has not been found in any add-ons.
+}
+
+message BaseBackground {
+    string BackgroundType = 1;
+    string FixedBackgroundID = 2;
+    string BackgroundContent = 3;
+    string BackgroundDefaultData = 4;
+    string AppClientID = 5;
+}
+
+message RuntimeBackground {
+    BaseBackground baseBackground = 1;
+    string PersistentData = 2;
+    string UniqueBackgroundID = 3;
+    int32 ControlPort = 4;
+    bool Deleted = 5;
+}
+
+message SimpleBackground {
+    string FilePath = 1;
+    string OriginalFilePath = 2;
+    int64 TimestampAdded = 3;
+    string BackgroundID = 4;
+}
+
+message SimpleBackgroundRequest {
+    enum RequestType {
+        DELETE = 0;
+        ADD = 1;
+    }
+    RequestType requestType = 1;
+    optional SimpleBackground simpleBackground = 2; // This field is only used when the requestType is DELETE.
+}
+
+message SimpleBackgroundResponse {
+    enum ResponseType {
+        SUCCESS = 0;
+        FAILURE = 1;
+    }
+    ResponseType responseType = 1;
+    optional string errorMessage = 2;
+    optional string statusMessage = 3;
+    optional string EncodingTicketID = 4;
+    optional string ResultFilePath = 5;
+}
+
+message SetBackgroundFromCache {
+    string FileName = 1;
+}

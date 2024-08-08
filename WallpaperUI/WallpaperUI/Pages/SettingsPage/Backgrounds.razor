@@ -110,12 +110,23 @@
     <div class="bg-white/[.08] mb-[2px] h-12 w-full p-3.5 text-base" style="font-weight: 400; display: flex; flex-direction: row; gap: 10px; align-items: center;">
         From addons
     </div>
-    <div class="bg-white/[.08] mb-[2px] flex h-max min-h-8 w-full flex-row flex-wrap gap-2 rounded-b-lg p-4">
+    <div class="bg-white/[.08] mb-[2px] flex h-max min-h-8 w-full flex-row flex-wrap gap-2 p-4">
 
         @foreach (var bkg in Home.availableBackgrounds)
         {
            @renderAvailableBackgroundsItem(bkg);
         }
+    </div>
+    <div class="w-full bg-white/[.08] flex flex-row active:bg-white/[.03] transition-all duration-150 ease-in-out p-4 h-16 rounded-b-lg justify-start items-center hover:shadow-[0_0px_0px_1px_rgba(255,255,255,0.1)]" @onclick="@(() => {
+        Settings.Instance.screen = "preferences";
+        Settings.Instance.Refresh();
+    })">
+        <div class="w-full">
+            You have to go to settings to modify addon wallpapers
+        </div>
+        <FluentIcon Value="@(new Icons.Regular.Size16.Open())" Color="Color.Neutral">
+
+        </FluentIcon>
     </div>
     
 </div>
@@ -166,9 +177,7 @@
 <div>Persistent ID: @Home.currentBackground</div>
 
 <!-- TODO: image carousel thingy here https://imgur.com/inEXZYt -->
-
-
-<div class="card flex flex-row items-center justify-center">
+@*<div class="card flex flex-row items-center justify-center">
     <FluentButton @onclick="@(async() => {
                     var req = App.Instance.controlPort;
 
@@ -341,7 +350,8 @@
 
         </FluentAccordionItem>
     }
-</FluentAccordion>
+</FluentAccordion>*@
+
 <div class="card2 absolute left-0 top-0 h-full w-full flex-col items-center justify-center"
      style="
         display: @(showEncodingDialog ? "flex" : "none");
@@ -541,6 +551,7 @@
 
     private Dictionary<string, RecentBackground> recentBackgrounds()
     {
+        
         if (App.Instance.preferencesManager.GetPreferences().TryGetValue("recentbackgrounds", out var bkgs))
         {
             JsonElement elem = bkgs;
@@ -571,7 +582,7 @@
 
     private void AddRecentColor(RecentColor color)
     {
-        var element = App.Instance.preferencesManager.GetOrDefault<JsonElement>("recentcolors", new JsonElement());
+        var element = App.Instance.preferencesManager.GetOrDefault<JsonElement>("recentcolors", new JsonElement().BlankObject());
 
 
         var subelement = new JsonObject();
