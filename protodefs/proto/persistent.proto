@@ -1,0 +1,12 @@
+syntax = "proto3";
+option go_package = "wallpaperuiserver/protocol";
+option csharp_namespace = "Wallpaper.CommonLanguage";
+import "panels.proto";
+import "backgrounds.proto";
+message PersistentRuntimePanels {
+    repeated RuntimePanel panels = 1;
+}
+
+message PersistentRuntimeBackgrounds {
+    repeated RuntimeBackground backgrounds = 1;
+}

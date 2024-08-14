@@ -8,7 +8,8 @@ message EncodingTicket {
         WAIT = 1;
     }
 
-    string TicketID = 1;
+     string TicketID = 1 ;
+     ActionType action = 2 ;
 }
 
 message EncodingTicketResponse {
@@ -18,10 +19,10 @@ message EncodingTicketResponse {
         ASKUSER = 2;
     }
 
-    ResponseType responseType = 1;
-    optional string errorMessage = 2;
+     ResponseType responseType = 1 ;
+     string errorMessage = 2 ;
 }
 
 message GetPreviewFile {
-    string FilePath = 1;
+     string FilePath = 1 ;
 }

@@ -36,9 +36,11 @@
     @<FluentIcon Value="@(new Icons.Regular.Size24.ArrowReset())" Color="Color.Neutral"></FluentIcon>,
     "Reset Settings",
     "Bring everything back to its default state.",
-    @<FluentButton Appearance="Appearance.Accent" @onclick="@(() => 
+    @<FluentButton Appearance="Appearance.Accent" @onclick="@(async () => 
         {
-            App.Instance.preferencesManager.Clear();
+            await App.Instance.preferencesManager.Write(async (x) => {
+                return new Wallpaper.CommonLanguage.AppSettings();
+            });
         })"> Reset settings </FluentButton>
     )
 

@@ -2,36 +2,35 @@ syntax = "proto3";
 option go_package = "wallpaperuiserver/protocol";
 option csharp_namespace = "Wallpaper.CommonLanguage";
 message PopupRequest {
-  string URL = 1;
-  string ClientID = 2;
-  string AppName = 3;
-  string Favicon = 4;
-  string Title = 5;
-  bool AutoAuthorize = 6;
-  string requestID = 7;
+   string URL = 1 ;
+   string ClientID = 2 ;
+   string AppName = 3 ;
+   string Favicon = 4 ;
+   string Title = 5 ;
+   bool AutoAuthorize = 6 ;
+   string requestID = 7 ;
 }
 
 message PopupResponse {
-    string requestID = 1;
-    bool cancelled = 2;
-    string resultData = 3;
+     string requestID = 1 ;
+     string resultData = 3 ;
 }
 
 message InputRequest {
-  string InputType = 1;
-  string InputPlaceholder = 2;
-  string ClientID = 3;
-  string AppName = 4;
-  string Favicon = 5;
-  string Title = 6;
-  int32 MaxLength = 7;
-  string requestID = 8;
+   string InputType = 1 ;
+   string InputPlaceholder = 2 ;
+   string ClientID = 3 ;
+   string AppName = 4 ;
+   string Favicon = 5 ;
+   string Title = 6 ;
+   int32 MaxLength = 7 ;
+   string requestID = 8 ;
 }
 
 message InputResponse {
-    string requestID = 1;
-    bool cancelled = 2;
-    string resultData = 3;
+     string requestID = 1 ;
+
+     string resultData = 3 ;
 }
 
 message ShutdownRequest {
@@ -44,7 +43,7 @@ message PopupAppControlMessage {
     INPUT = 1;
     SHUTDOWN = 2;
   }
-  MessageType type = 1;
+   MessageType type = 1 ;
   oneof message {
     PopupRequest popupRequest = 2;
     InputRequest inputRequest = 3;
@@ -61,4 +60,6 @@ message PopupAppResponse {
         PopupResponse popupResponse = 1;
         InputResponse inputResponse = 2;
     }
+     bool cancelled = 3 ;
+     MessageType type = 4 ;
 }

@@ -1,7 +1,8 @@
 import { app, BrowserWindow, ipcMain, session } from "electron";
 import { set } from "lodash-es";
-import path from "node:path";
+import path from "path";
 import WebSocket, { WebSocketServer } from "ws";
+import * as protocol from "./src/protocol/protocol.js"
 const __dirname = import.meta.dirname;
 let socket = null;
 
@@ -47,45 +48,61 @@ const createWindow = () => {
 
 const sendPopupResult = (trackingid, data) => {
   socket.send(
-    JSON.stringify({
-      Type: "popup",
-      trackingID: trackingid,
-      popup_ResultData: data || "",
-      cancelled: false,
-    })
+    protocol.PopupAppResponse.encode(
+      new protocol.PopupAppResponse({
+        type: protocol.PopupAppResponse.MessageType.POPUP,
+        cancelled: false,
+        popupResponse: {
+          requestID: trackingid,
+          resultData: data || "",
+        },
+      })
+    ).finish()
   );
 };
 
 const sendPopupCancel = (trackingid) => {
   socket.send(
-    JSON.stringify({
-      Type: "popup",
-      trackingID: trackingid,
-      cancelled: true,
-      popup_ResultData: "",
-    })
+    protocol.PopupAppResponse.encode(
+      new protocol.PopupAppResponse({
+        type: protocol.PopupAppResponse.MessageType.POPUP,
+        cancelled: true,
+        popupResponse: {
+          requestID: trackingid,
+          resultData: "",
+        },
+      })
+    ).finish()
   );
 };
 
 const sendInputResult = (trackingid, data) => {
   socket.send(
-    JSON.stringify({
-      Type: "input",
-      trackingID: trackingid,
-      input_ResultData: data,
-      cancelled: false,
-    })
+    protocol.PopupAppResponse.encode(
+      new protocol.PopupAppResponse({
+        type: protocol.PopupAppResponse.MessageType.INPUT,
+        cancelled: false,
+        inputResponse: {
+          requestID: trackingid,
+          resultData: data || "",
+        },
+      })
+    ).finish()
   );
 };
 
 const sendInputCancel = (trackingid) => {
   socket.send(
-    JSON.stringify({
-      Type: "input",
-      trackingID: trackingid,
-      input_ResultData: "",
-      cancelled: true,
-    })
+    protocol.PopupAppResponse.encode(
+      new protocol.PopupAppResponse({
+        type: protocol.PopupAppResponse.MessageType.INPUT,
+        cancelled: true,
+        inputResponse: {
+          requestID: trackingid,
+          resultData: "",
+        },
+      })
+    ).finish()
   );
 };
 
@@ -283,28 +300,27 @@ function setupWebSocket() {
     console.error(err);
   });
   socket.on("message", (data) => {
-    let message = JSON.parse(data);
-    console.log(message);
-    switch (message.Type) {
-      case "popup":
+    let message = protocol.PopupAppControlMessage.decode(data);
+    switch (message.type) {
+      case protocol.PopupAppControlMessage.MessageType.POPUP:
         createPopup(
-          message["popup_URL"],
-          message["popup_ClientID"],
-          message["popup_AppName"],
-          message["popup_Favicon"],
-          message["popup_Title"],
-          message["trackingID"]
+          message.popupRequest.URL,
+          message.popupRequest.ClientID,
+          message.popupRequest.AppName,
+          message.popupRequest.Favicon,
+          message.popupRequest.Title,
+          message.popupRequest.requestID
         );
         break;
-      case "input":
+      case protocol.PopupAppControlMessage.MessageType.INPUT:
         createInputWindow(
-          message["input_Type"],
-          message["input_Placeholder"],
-          message["input_MaxLength"],
-          message["trackingID"]
+          message.inputRequest.InputType,
+          message.inputRequest.InputPlaceholder,
+          message.inputRequest.MaxLength,
+          message.inputRequest.requestID
         );
         break;
-      case "stop":
+      case protocol.PopupAppControlMessage.MessageType.SHUTDOWN:
         app.quit();
         break;
     }

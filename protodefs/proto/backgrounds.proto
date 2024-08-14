@@ -6,31 +6,31 @@ message BackgroundSystemInitialResponse {
     repeated BaseBackground templateBackgrounds = 1;
     repeated RuntimeBackground instancedButBlankBackgrounds = 2;
     repeated RuntimeBackground instancedBackgroundsFromStorage = 3;
-    string LastActiveBackgroundID = 4;
+     string LastActiveBackgroundID = 4 ;
     repeated RuntimeBackground deletedInstancedBackgrounds = 5; // This field represents backgrounds that have been attempted to be loaded by the system from the storage file, but have been deleted because it has not been found in any add-ons.
 }
 
 message BaseBackground {
-    string BackgroundType = 1;
-    string FixedBackgroundID = 2;
-    string BackgroundContent = 3;
-    string BackgroundDefaultData = 4;
-    string AppClientID = 5;
+     string BackgroundType = 1 ;
+     string FixedBackgroundID = 2 ;
+     string BackgroundContent = 3 ;
+     string BackgroundDefaultData = 4 ;
+     string AppClientID = 5 ;
 }
 
 message RuntimeBackground {
-    BaseBackground baseBackground = 1;
-    string PersistentData = 2;
-    string UniqueBackgroundID = 3;
-    int32 ControlPort = 4;
-    bool Deleted = 5;
+     BaseBackground baseBackground = 1;
+     string PersistentData = 2 ;
+     string UniqueBackgroundID = 3 ;
+     int32 ControlPort = 4 ;
+     bool Deleted = 5 ;
 }
 
 message SimpleBackground {
-    string FilePath = 1;
-    string OriginalFilePath = 2;
-    int64 TimestampAdded = 3;
-    string BackgroundID = 4;
+     string FilePath = 1 ;
+     string OriginalFilePath = 2 ;
+     int64 TimestampAdded = 3 ;
+     string BackgroundID = 4 ;
 }
 
 message SimpleBackgroundRequest {
@@ -38,22 +38,65 @@ message SimpleBackgroundRequest {
         DELETE = 0;
         ADD = 1;
     }
-    RequestType requestType = 1;
-    optional SimpleBackground simpleBackground = 2; // This field is only used when the requestType is DELETE.
+     RequestType requestType = 1 ;
+
+     SimpleBackground simpleBackground = 2; // This field is only used when the requestType is DELETE.
+     string resultFileName = 3 ; // This field is only used when the requestType is ADD.
+     string simpleBackgroundID = 4 ; // This field is only used when the requestType is ADD.
 }
 
 message SimpleBackgroundResponse {
     enum ResponseType {
         SUCCESS = 0;
         FAILURE = 1;
+        CANCELLED = 2;
     }
-    ResponseType responseType = 1;
-    optional string errorMessage = 2;
-    optional string statusMessage = 3;
-    optional string EncodingTicketID = 4;
-    optional string ResultFilePath = 5;
+     ResponseType responseType = 1 ;
+     string errorMessage = 2 ;
+     string statusMessage = 3 ;
+     string EncodingTicketID = 4 ;
+     string ResultFilePath = 5 ;
+     string OriginalFilePath = 6 ;
 }
 
 message SetBackgroundFromCache {
-    string FileName = 1;
+     string FileName = 1  ;
+}
+
+message RuntimeBackgroundChangeRequest {
+    repeated RuntimeBackground newBackgrounds = 1;
+     string NewActiveBackgroundID = 2 ;
+}
+
+message RecentBackground {
+    enum BackgroundType {
+        SIMPLE = 0;
+        INSTANCED = 1;
+    }
+     BackgroundType backgroundType = 1 ;
+    oneof background {
+        string simpleBackgroundID = 2 ;
+        string instancedBackgroundID = 3 ;
+    }
+     int64 TimestampAdded = 4 ;
+
+}
+
+message RecentBackgroundStore {
+    map<string, RecentBackground> recentBackgrounds = 1;
+}
+
+message SimpleBackgroundsSystem {
+    repeated SimpleBackground simpleBackgrounds = 1;
+     bool IsSimpleBackgroundEnabled = 2 ;
+     string ActiveSimpleBackgroundID = 3 ;
+}
+
+message RecentColor {
+     string color = 1 ;
+     int64 TimestampAdded = 2 ;
+}
+
+message RecentColorSystem {
+    repeated RecentColor recentColors = 1;
 }

@@ -9,12 +9,15 @@ import (
 	"net/http"
 	"os"
 	"path"
-	"time"
 	"path/filepath"
+	"time"
+	"wallpaperuiserver/protocol"
 
 	"github.com/elliotchance/pie/v2"
 	"github.com/gorilla/websocket"
 	"github.com/sqweek/dialog"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 var MAX_STARTUP_ATTEMPTS = 5
@@ -49,11 +52,6 @@ func applyAddonChanges(w http.ResponseWriter, r *http.Request) {
 	changes := make(map[string]string)
 	err := json.NewDecoder(bytes.NewReader([]byte(r.URL.Query().Get("changes")))).Decode(&changes)
 	w.Header().Set("Access-Control-Allow-Origin", "*")
-	if err != nil {
-		log.Println(err)
-		w.WriteHeader(http.StatusBadRequest)
-		return
-	}
 	if err != nil {
 		log.Println(err)
 		w.WriteHeader(http.StatusBadRequest)
@@ -208,93 +206,89 @@ func BootstrapAddon(foldername string, manifest AddonManifest, donecallback func
 	return ref, nil
 }
 
-func LoadAllTemplatePanels(filename string) ([]TemplateCustomPanel, error) {
+func LoadAllBasePanels(filename string) ([]protocol.BasePanel, error) {
 	panelsFile, err := os.ReadFile(filename)
 	if err != nil {
 		log.Println(err)
-		return []TemplateCustomPanel{}, err
+		return []protocol.BasePanel{}, err
 	}
-	panels := []TemplateCustomPanel{}
+	panels := []TemplateCustomPanel2{}
 	err = json.Unmarshal(panelsFile, &panels)
-	if err != nil {
-		log.Println(err)
-		return []TemplateCustomPanel{}, err
-	}
-	return panels, nil
-}
-
-func LoadAllRuntimePanels(filename string) ([]RuntimeCustomPanel, error) {
-	panelsFile, err := os.ReadFile(filename)
-	if err != nil {
-		log.Println(err)
-		return []RuntimeCustomPanel{}, err
-	}
-	panels := []RuntimeCustomPanel{}
-	err = json.Unmarshal(panelsFile, &panels)
-	if err != nil {
-		log.Println(err)
-		return []RuntimeCustomPanel{}, err
-	}
-	return panels, nil
-}
-
-func ConvertTemplatePanelsToRuntimePanels(panels []TemplateCustomPanel) []RuntimeCustomPanel {
-	runtimePanels := []RuntimeCustomPanel{}
+	protoformat := []protocol.BasePanel{}
 	for _, panel := range panels {
-		runtimePanels = append(runtimePanels, RuntimeCustomPanel{
+		protoformat = append(protoformat, protocol.BasePanel{
 			PanelType: panel.PanelType,
-			LoaderPanelID: panel.LoaderPanelID,
-			PersistentPanelID: GenerateGUID(),
-			PersistentPanelData: panel.PanelDefaultData,
 			PanelTitle: panel.PanelTitle,
 			PanelContent: panel.PanelContent,
-			PanelRecommendedWidth: panel.PanelRecommendedWidth,
-			PanelRecommendedHeight: panel.PanelRecommendedHeight,
-			PanelMinWidth: panel.PanelMinWidth,
-			PanelMinHeight: panel.PanelMinHeight,
-			PanelMaxWidth: panel.PanelMaxWidth,
-			PanelMaxHeight: panel.PanelMaxHeight,
-			PanelRecommendedX: panel.PanelRecommendedX,
-			PanelRecommendedY: panel.PanelRecommendedY,
-			PersistentPanelWidth: panel.PanelRecommendedWidth,
-			PersistentPanelHeight: panel.PanelRecommendedHeight,
-			PersistentPanelX: panel.PanelRecommendedX,
-			PersistentPanelY: panel.PanelRecommendedY,
-			PanelIcon: panel.PanelIcon,
-			ClientID: panel.ClientID,
+			PanelRecommendedWidth: float64(panel.PanelRecommendedWidth),
+			PanelRecommendedHeight:float64(panel.PanelRecommendedHeight),
+			PanelMinWidth: float64(panel.PanelMinWidth),
+			PanelMinHeight: float64(panel.PanelMinHeight),
+			PanelMaxWidth: float64(panel.PanelMaxWidth),
+			PanelMaxHeight: float64(panel.PanelMaxHeight),
+			PanelRecommendedX:  float64(panel.PanelRecommendedX),
+			PanelRecommendedY: float64(panel.PanelRecommendedY),
+			DefaultData: panel.PanelDefaultData,
+			PanelIcon:panel.PanelIcon,
+			AppClientID: panel.ClientID,
+			FixedPanelID: panel.LoaderPanelID,
+		})
+	}
+	if err != nil {
+		log.Println(err)
+		return []protocol.BasePanel{}, err
+	}
+	return protoformat, nil
+}
+
+func LoadAllRuntimePanels(filename string) ([]protocol.RuntimePanel, error) {
+	panelsFile, err := os.ReadFile(filename)
+	if err != nil {
+		log.Println(err)
+		return []protocol.RuntimePanel{}, err
+	}
+	result := protocol.PersistentRuntimePanels{}
+	err = protojson.Unmarshal(panelsFile, &result)
+	copied := pie.Map(result.Panels, func(panel *protocol.RuntimePanel) protocol.RuntimePanel {
+		return *proto.Clone(panel).(*protocol.RuntimePanel);
+	})
+	if err != nil {
+		log.Println(err)
+		return []protocol.RuntimePanel{}, err
+	}
+	return copied, nil
+}
+
+func ConvertTemplatePanelsToRuntimePanels(panels []protocol.BasePanel) []protocol.RuntimePanel {
+	runtimePanels := []protocol.RuntimePanel{}
+	for _, panel := range panels {
+		copy := proto.Clone(&panel).(*protocol.BasePanel)
+		runtimePanels = append(runtimePanels, protocol.RuntimePanel{
+			BasePanel: copy,
+			PersistentData: panel.DefaultData,
+			UniquePanelID: GenerateGUID(),
 			Deleted: false,
 		})
 	}
 	return runtimePanels
 }
 
-func MeshTemplateAndRuntimePanels(availablePanels []TemplateCustomPanel, lastActivePanels []RuntimeCustomPanel) []RuntimeCustomPanel {
-	meshedPanels := append([]RuntimeCustomPanel{}, lastActivePanels...)
+func MeshTemplateAndRuntimePanels(availablePanels []protocol.BasePanel, lastActivePanels []protocol.RuntimePanel) []protocol.RuntimePanel {
+	meshedPanels := append([]protocol.RuntimePanel{}, lastActivePanels...)
 	for _, templatepanel := range availablePanels {
-		index := pie.FindFirstUsing(meshedPanels, func(panel RuntimeCustomPanel) bool { return panel.LoaderPanelID == templatepanel.LoaderPanelID });
+		index := pie.FindFirstUsing(meshedPanels, func(panel protocol.RuntimePanel) bool { return panel.GetBasePanel().FixedPanelID == templatepanel.FixedPanelID });
 		if index == -1 {
 			continue;
 		}
 		duplicatePanel := meshedPanels[index]
-		duplicatePanel.PanelTitle = templatepanel.PanelTitle
-		duplicatePanel.PanelContent = templatepanel.PanelContent
-		duplicatePanel.PanelRecommendedWidth = templatepanel.PanelRecommendedWidth
-		duplicatePanel.PanelRecommendedHeight = templatepanel.PanelRecommendedHeight
-		duplicatePanel.PanelMinWidth = templatepanel.PanelMinWidth
-		duplicatePanel.PanelMinHeight = templatepanel.PanelMinHeight
-		duplicatePanel.PanelMaxWidth = templatepanel.PanelMaxWidth
-		duplicatePanel.PanelMaxHeight = templatepanel.PanelMaxHeight
-		duplicatePanel.PanelRecommendedX = templatepanel.PanelRecommendedX
-		duplicatePanel.PanelRecommendedY = templatepanel.PanelRecommendedY
-		duplicatePanel.PanelIcon = templatepanel.PanelIcon
-		duplicatePanel.ClientID = templatepanel.ClientID
+		duplicatePanel.BasePanel = &templatepanel
 		duplicatePanel.Deleted = false
 		meshedPanels[index] = duplicatePanel
 	}
 	for index, runtimePanel := range meshedPanels {
 		found := false
 		for _, templatepanel := range availablePanels {
-			if runtimePanel.LoaderPanelID == templatepanel.LoaderPanelID {
+			if runtimePanel.BasePanel.FixedPanelID == templatepanel.FixedPanelID {
 				found = true
 				break
 			}
@@ -307,12 +301,12 @@ func MeshTemplateAndRuntimePanels(availablePanels []TemplateCustomPanel, lastAct
 	return meshedPanels
 }
 
-func DeletedPanels(lastActivePanels []RuntimeCustomPanel, availablePanels []TemplateCustomPanel) []RuntimeCustomPanel {
-	deletedPanels := []RuntimeCustomPanel{}
+func DeletedPanels(lastActivePanels []protocol.RuntimePanel, availablePanels []protocol.BasePanel) []protocol.RuntimePanel {
+	deletedPanels := []protocol.RuntimePanel{}
 	for _, runtimePanel := range lastActivePanels {
 		found := false
 		for _, templatePanel := range availablePanels {
-			if runtimePanel.LoaderPanelID == templatePanel.LoaderPanelID {
+			if runtimePanel.BasePanel.AppClientID == templatePanel.FixedPanelID {
 				found = true
 				break
 			}

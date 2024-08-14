@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
@@ -10,6 +9,7 @@ import (
 	"path/filepath"
 	"syscall"
 	"time"
+	"wallpaperuiserver/protocol"
 )
 
 var encodertochan = make(map[string]chan string)
@@ -38,34 +38,39 @@ func hashCode(s string) int {
 
 func addRecentMediaBackground(backgroundid string, filename string, persistentbackgroundid string) {
 	fmt.Println("Addded:" + backgroundid + ", " + filename + ", " + persistentbackgroundid)
-	pref := cachedpreferences
-	if _, ok := pref["recentbackgrounds"]; !ok {
-		pref["recentbackgrounds"] = make(map[string]interface{})
+	bkgtype := protocol.RecentBackground_SIMPLE
+	if persistentbackgroundid != "" {
+		bkgtype = protocol.RecentBackground_INSTANCED
 	}
-	pref["recentbackgrounds"].(map[string]interface{})[backgroundid] = map[string]string{
-		"filename":               filename,
-		"persistentbackgroundid": persistentbackgroundid,
-		"timestampaddednanos": fmt.Sprint(time.Now().UnixNano()),
-	}
-	cachedpreferences = pref
-	marshalled, _ := json.Marshal(cachedpreferences)
-	os.WriteFile("preferences.json", marshalled, 0755)
-	preferenceschannel.SendMessage(PreferenceUpdate{cachedpreferences, GenerateGUID(), false})
+
+	cachedpreferences.Write(func(as protocol.AppSettings) protocol.AppSettings {
+		id := fmt.Sprint(hashCode(backgroundid))
+		as.RecentBackgroundStore.RecentBackgrounds[id] = &protocol.RecentBackground{
+			BackgroundType: 		bkgtype,
+			TimestampAdded: 		time.Now().UnixNano(),
+		}
+
+		if bkgtype == protocol.RecentBackground_INSTANCED {
+			as.RecentBackgroundStore.RecentBackgrounds[id].Background = &protocol.RecentBackground_InstancedBackgroundID{
+				InstancedBackgroundID: persistentbackgroundid,
+			}
+		} else {
+			as.RecentBackgroundStore.RecentBackgrounds[id].Background = &protocol.RecentBackground_SimpleBackgroundID{
+				SimpleBackgroundID: backgroundid,
+			}
+		}
+		return as
+	})
 }
 
 func removeRecentMediaBackground(backgroundid string) {
-	pref := cachedpreferences
-	if _, ok := pref["recentbackgrounds"]; !ok {
-		return
-	}
-	delete(pref["recentbackgrounds"].(map[string]interface{}), backgroundid)
-	cachedpreferences = pref
-	marshalled, _ := json.Marshal(cachedpreferences)
-	os.WriteFile("preferences.json", marshalled, 0755)
-	preferenceschannel.SendMessage(PreferenceUpdate{cachedpreferences, GenerateGUID(), false})
+	cachedpreferences.Write(func(as protocol.AppSettings) protocol.AppSettings {
+		delete(as.RecentBackgroundStore.RecentBackgrounds, backgroundid)
+		return as
+	})
 }
 
-func reencodeVideoFile(inputfile string, outputfile string, codec string, quality string, stripAudio bool, controlchannel chan string) {
+func reencodeVideoFile(inputfile string, outputfile string, codec string, quality string, stripAudio bool, controlchannel chan string, request protocol.SimpleBackgroundRequest) {
 	// This function is used to reencode video files with ffmpeg
 	// inputfile: the path to the video file to reencode
 	// outputfile: the path to the reencoded video file
@@ -98,14 +103,14 @@ func reencodeVideoFile(inputfile string, outputfile string, codec string, qualit
 	if err != nil {
 		controlchannel <- "error," + err.Error()
 	} else {
-		addRecentMediaBackground(fmt.Sprint(hashCode(filepath.Base(outputfile))), filepath.Base(outputfile), "")
+		addRecentMediaBackground(request.SimpleBackgroundID, filepath.Base(outputfile), "")
 		controlchannel <- "done"
 		donechannel <- true
 	}
 
 }
 
-func reencodeImageFile(inputfile string, outputfile string, controlchannel chan string) {
+func reencodeImageFile(inputfile string, outputfile string, controlchannel chan string, request protocol.SimpleBackgroundRequest) {
 	process := exec.Command("tools\\imagemagick\\magick.exe", inputfile, "-define", "png:compression-filter=5", "-define", "png:compression-level=9", "-define", "png:compression-strategy=2", outputfile)
 	donechannel := make(chan bool)
 	go func() {
@@ -126,14 +131,14 @@ func reencodeImageFile(inputfile string, outputfile string, controlchannel chan 
 	if err != nil {
 		controlchannel <- "error," + err.Error()
 	} else {
-		addRecentMediaBackground(fmt.Sprint(hashCode(filepath.Base(outputfile))), filepath.Base(outputfile), "")
+		addRecentMediaBackground(request.SimpleBackgroundID, filepath.Base(outputfile), "")
 		controlchannel <- "done"
 		donechannel <- true
 	}
 
 }
 
-func startReencodingSub(inputfile string, filename string, controlchannel chan string, specifictype string) (string, error) {
+func startReencodingSub(inputfile string, filename string, controlchannel chan string, specifictype string, request protocol.SimpleBackgroundRequest) (string, error) {
 	switch specifictype {
 	case "Video":
 		outpath, err := filepath.Abs(path.Join("result", filename+".webm"))
@@ -141,7 +146,7 @@ func startReencodingSub(inputfile string, filename string, controlchannel chan s
 			return "", err
 		}
 		go func() {
-			reencodeVideoFile(inputfile, outpath, "libsvtav1", "23", true, controlchannel)
+			reencodeVideoFile(inputfile, outpath, "libsvtav1", "23", true, controlchannel,request)
 		}()
 		return outpath, nil
 	case "Image":
@@ -150,7 +155,7 @@ func startReencodingSub(inputfile string, filename string, controlchannel chan s
 			return "", err
 		}
 		go func() {
-			reencodeImageFile(inputfile, outpath, controlchannel)
+			reencodeImageFile(inputfile, outpath, controlchannel,request)
 		}()
 		return outpath, nil
 	default:
@@ -160,7 +165,7 @@ func startReencodingSub(inputfile string, filename string, controlchannel chan s
 			if specifiedtype == "cancel" {
 				return
 			}
-			outpath, error := startReencodingSub(inputfile, filename, controlchannel, specifiedtype)
+			outpath, error := startReencodingSub(inputfile, filename, controlchannel, specifiedtype,request)
 			if error != nil {
 				controlchannel <- "error," + error.Error()
 			} else {
@@ -171,10 +176,10 @@ func startReencodingSub(inputfile string, filename string, controlchannel chan s
 	}
 }
 
-func startReencoding(inputfile string, controlchannel chan string, filename string) (string, error) {
+func startReencoding(inputfile string, controlchannel chan string, filename string, request protocol.SimpleBackgroundRequest) (string, error) {
 	filetype := FileNameToMediaType(inputfile)
 	if _, ok := os.Stat("result"); os.IsNotExist(ok) {
 		os.Mkdir("result", 0755)
 	}
-	return startReencodingSub(inputfile, filename, controlchannel, filetype)
+	return startReencodingSub(inputfile, filename, controlchannel, filetype,request)
 }

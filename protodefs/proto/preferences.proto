@@ -1,0 +1,16 @@
+syntax = "proto3";
+option go_package = "wallpaperuiserver/protocol";
+option csharp_namespace = "Wallpaper.CommonLanguage";
+import "backgrounds.proto";
+import "panels.proto";
+
+message AppSettings {
+     SimpleBackgroundsSystem simpleBackgroundsSystem = 1;
+     string accentColor = 2 ;
+     RecentColorSystem recentColorSystem = 3;
+     bool useSystemAccentColor = 4 ;
+     RecentBackgroundStore recentBackgroundStore = 5;
+     bool useSystemBackground = 6 ;
+    repeated RuntimePanel panelsToSkip = 7;
+
+}

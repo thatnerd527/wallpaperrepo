@@ -80,11 +80,17 @@ function setupPanelConnection() {
                 return;
             }
             if (!sentInitialData) {
-                DotNet.invokeMethod("WallpaperUI", "LoadPanelData", event.data);
+                
+                event.data.arrayBuffer().then(x => {
+                    DotNet.invokeMethod("WallpaperUI", "LoadPanelData", new Uint8Array(x));
+                })
                 sentInitialData = true;
                 resolve();
             } else {
-                DotNet.invokeMethod("WallpaperUI", "UpdatePanelData", event.data);
+                event.data.arrayBuffer().then(x => {
+                    DotNet.invokeMethod("WallpaperUI", "UpdatePanelData", new Uint8Array(x));
+                })
+                
                 fetch("http://localhost:" + controlPort + "/addons").then(x => {
                     x.text().then(y => {
 
@@ -137,11 +143,15 @@ function setupBackgroundConnection() {
                 return;
             }
             if (!sentInitialData) {
-                DotNet.invokeMethod("WallpaperUI", "LoadBackgroundData", event.data);
+                event.data.arrayBuffer().then(x => {
+                    DotNet.invokeMethod("WallpaperUI", "LoadBackgroundData", new Uint8Array(x));
+                })
                 sentInitialData = true;
                 resolve();
             } else {
-                DotNet.invokeMethod("WallpaperUI", "UpdateBackgroundData", event.data);
+                event.data.arrayBuffer().then(x => {
+                    DotNet.invokeMethod("WallpaperUI", "UpdateBackgroundData", new Uint8Array(x));
+                })
                 fetch("http://localhost:" + controlPort + "/addons").then(x => {
                     x.text().then(y => {
 
@@ -193,7 +203,9 @@ function setupPreferencesConnection() {
             if (!connected) {
                 return;
             }
-            DotNet.invokeMethod("WallpaperUI", "UpdatePreferences", event.data);
+            event.data.arrayBuffer().then(x => {
+                DotNet.invokeMethod("WallpaperUI", "UpdatePreferences", new Uint8Array(x));
+            })
             resolve();
         });
         preferencessystem.addEventListener("error", function (event) {

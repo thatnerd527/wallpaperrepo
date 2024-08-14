@@ -3,23 +3,27 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
 	"path"
 	"path/filepath"
+	"wallpaperuiserver/protocol"
 
+	"github.com/elliotchance/pie/v2"
 	"github.com/sqweek/dialog"
+	"google.golang.org/protobuf/proto"
 )
-var guidtofilepath = make(map[string]string)
 
+var guidtofilepath = make(map[string]string)
 
 func FileNameToMediaType(filename string) string {
 	switch filepath.Ext(filename) {
-	case ".mp4",".webm",".mov",".avi",".mkv",".flv",".wmv",".mpg",".mpeg",".m4v",".3gp",".3g2":
+	case ".mp4", ".webm", ".mov", ".avi", ".mkv", ".flv", ".wmv", ".mpg", ".mpeg", ".m4v", ".3gp", ".3g2":
 		return "Video"
-	case ".jpg", ".jpeg", ".png",".avif", ".webp", ".gif":
+	case ".jpg", ".jpeg", ".png", ".avif", ".webp", ".gif":
 		return "Image"
 	default:
 		return "unknown"
@@ -30,39 +34,33 @@ func setBackgroundFromCache(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "GET" {
 		w.Header().Add("Access-Control-Allow-Origin", "*")
 		if !r.URL.Query().Has("delete") {
-			filename, err := filepath.Abs(path.Join("result", r.URL.Query().Get("filename")))
-			if err != nil {
-				log.Println(err)
-				w.WriteHeader(http.StatusInternalServerError)
-				return
-			}
-			pref := cachedpreferences
-			if _, err := os.Stat(filename); err == nil {
-				path2 := filename
+			backgrounds := cachedpreferences.Read().SimpleBackgroundsSystem.SimpleBackgrounds
+			backgroundFiltered := pie.Filter(referenceToArray(backgrounds), func(s protocol.SimpleBackground) bool {
+					return s.BackgroundID == r.URL.Query().Get("backgroundid")
+			})
+			background := backgroundFiltered[0]
+			if _, err := os.Stat(background.FilePath); err == nil {
+				cachedpreferences.Write(func(as protocol.AppSettings) protocol.AppSettings {
+					as.SimpleBackgroundsSystem.IsSimpleBackgroundEnabled = true
+					as.SimpleBackgroundsSystem.ActiveSimpleBackgroundID = r.URL.Query().Get("backgroundid")
+					return as
+				})
+				backgroundid := r.URL.Query().Get("backgroundid")
 
-				pref["simplebackground"] = path2
-				addRecentMediaBackground(fmt.Sprint(hashCode(r.URL.Query().Get("filename"))), r.URL.Query().Get("filename"), "")
-				cachedpreferences = pref
-				marshalled, _ := json.Marshal(cachedpreferences)
-				os.WriteFile("preferences.json", marshalled, 0755)
-				fmt.Println("Set simple background to " + path2)
+				addRecentMediaBackground(backgroundid, path.Base(background.FilePath), "")
+				fmt.Println("Set simple background to " + background.FilePath)
 
-				preferenceschannel.SendMessage(PreferenceUpdate{cachedpreferences, GenerateGUID(), false})
 			} else {
 				log.Println("File not found")
 				w.WriteHeader(http.StatusNotFound)
 			}
 			return
 		} else {
-			filename, err := filepath.Abs(path.Join("result", r.URL.Query().Get("filename")))
-			if err != nil {
-				log.Println(err)
-				w.WriteHeader(http.StatusInternalServerError)
-				return
-			}
-
-			if _, err := os.Stat(filename); err == nil {
-				err := os.Remove(filename)
+			idtofilename := pie.Filter(referenceToArray(cachedpreferences.Read().SimpleBackgroundsSystem.SimpleBackgrounds), func(s protocol.SimpleBackground) bool {
+				return s.BackgroundID == r.URL.Query().Get("backgroundid")
+			})[0].FilePath
+			if _, err := os.Stat(idtofilename); err == nil {
+				err := os.Remove(idtofilename)
 				if err != nil {
 					log.Println(err)
 					w.WriteHeader(http.StatusInternalServerError)
@@ -75,35 +73,57 @@ func setBackgroundFromCache(w http.ResponseWriter, r *http.Request) {
 
 func simpleBackgroundHandler(w http.ResponseWriter, r *http.Request) {
 
-	if (r.Method == "GET") {
-		if r.URL.Query().Get("delete") == "true" {
-			delete(cachedpreferences, "simplebackground")
-			preferenceschannel.SendMessage(PreferenceUpdate{cachedpreferences, GenerateGUID(), false})
-			w.Header().Add("Access-Control-Allow-Origin", "*")
+	if r.Method == "GET" {
+		background := cachedpreferences.Read().SimpleBackgroundsSystem.SimpleBackgrounds
+		filtered := pie.Filter(referenceToArray(background), func(s protocol.SimpleBackground) bool {
+			return s.BackgroundID == r.URL.Query().Get("backgroundid")
+		})
+		w.Header().Add("Access-Control-Allow-Origin", "*")
+		if len(filtered) == 0 {
+			w.WriteHeader(http.StatusNotFound)
+			return
+		} else {
+			http.ServeFile(w, r, filtered[0].FilePath)
 			return
 		}
-		if val, ok := cachedpreferences["simplebackground"]; ok {
-			w.Header().Set("Content-Type", "application/octet-stream")
-			http.ServeFile(w, r, val.(string))
-		} else {
-			w.WriteHeader(http.StatusNotFound)
-		}
+
+	} else if r.Method != "POST" {
+		w.WriteHeader(http.StatusMethodNotAllowed)
+		return
+	}
+
+	parsed := protocol.SimpleBackgroundRequest{}
+	data, err := io.ReadAll(r.Body)
+	if err != nil {
+		log.Println(err)
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	proto.Unmarshal(data, &parsed)
+	if parsed.RequestType == protocol.SimpleBackgroundRequest_DELETE {
+		cachedpreferences.Write(func(as protocol.AppSettings) protocol.AppSettings {
+			as.SimpleBackgroundsSystem.IsSimpleBackgroundEnabled = false
+			as.SimpleBackgroundsSystem.ActiveSimpleBackgroundID = ""
+			return as
+		})
 		w.Header().Add("Access-Control-Allow-Origin", "*")
-	} else if (r.Method == "POST") {
+	}
+	if parsed.RequestType == protocol.SimpleBackgroundRequest_ADD {
 		w.Header().Add("Access-Control-Allow-Origin", "*")
-		filename := r.URL.Query().Get("resultfilename")
+		filename := parsed.ResultFileName
 		zipPath2, err := dialog.File().Title("Select simple background file").
-		Filter("Image files", "jpg", "jpeg", "png", "avif", "webp", "gif").
-		Filter("Video Files", "mp4","webm","mov","avi","mkv","flv","wmv","mpg","mpeg","m4v","3gp","3g2").
-		Filter("Other files","*").Load()
+			Filter("Image files", "jpg", "jpeg", "png", "avif", "webp", "gif").
+			Filter("Video Files", "mp4", "webm", "mov", "avi", "mkv", "flv", "wmv", "mpg", "mpeg", "m4v", "3gp", "3g2").
+			Filter("Other files", "*").Load()
 		if err != nil {
 			log.Println(err)
-			tmp := make(map[string]string)
-			tmp["error"] = err.Error()
-			tmp["status"] = "cancelled"
-			tmp["guid"] = ""
-			tmp["resultfile"] = ""
-			data, err := json.Marshal(tmp)
+			tmp := protocol.SimpleBackgroundResponse{}
+			clone := err.Error()
+			tmp.ErrorMessage = clone
+			tmp.ResponseType = protocol.SimpleBackgroundResponse_CANCELLED
+			tmp.EncodingTicketID = ""
+			tmp.StatusMessage = "cancel"
+			data, err := proto.Marshal(&tmp)
 			if err != nil {
 				log.Println(err)
 				w.WriteHeader(http.StatusInternalServerError)
@@ -115,15 +135,16 @@ func simpleBackgroundHandler(w http.ResponseWriter, r *http.Request) {
 
 		encodingguid := GenerateGUID()
 		encodertochan[encodingguid] = make(chan string)
-		resultfile, err := startReencoding(zipPath2, encodertochan[encodingguid], filename)
+		resultfile, err := startReencoding(zipPath2, encodertochan[encodingguid], filename,parsed)
 		if err != nil {
 			log.Println(err)
-			tmp := make(map[string]string)
-			tmp["error"] = err.Error()
-			tmp["status"] = "errorprestart"
-			tmp["guid"] = ""
-			tmp["resultfile"] = ""
-			data, err := json.Marshal(tmp)
+			tmp := protocol.SimpleBackgroundResponse{}
+			clone := err.Error()
+			tmp.ErrorMessage = clone
+			tmp.ResponseType = protocol.SimpleBackgroundResponse_FAILURE
+			tmp.EncodingTicketID = ""
+			tmp.StatusMessage = "errorprestart"
+			data, err := proto.Marshal(&tmp)
 			if err != nil {
 				log.Println(err)
 				w.WriteHeader(http.StatusInternalServerError)
@@ -131,18 +152,20 @@ func simpleBackgroundHandler(w http.ResponseWriter, r *http.Request) {
 			w.Write(data)
 			return
 		}
-		tmp := make(map[string]string)
-		tmp["error"] = ""
-		tmp["status"] = "encoding"
-		tmp["guid"] = encodingguid
-		tmp["resultfile"] = resultfile
-		data, err := json.Marshal(tmp)
+		tmp := protocol.SimpleBackgroundResponse{}
+		tmp.ErrorMessage = ""
+		tmp.ResponseType = protocol.SimpleBackgroundResponse_SUCCESS
+		tmp.EncodingTicketID = encodingguid
+		tmp.ResultFilePath = resultfile
+		tmp.StatusMessage = "started"
+		tmp.OriginalFilePath = zipPath2
+		data, err := proto.Marshal(&tmp)
 		if err != nil {
 			log.Println(err)
 			return
 		}
 		w.Write(data)
-		return;
+		return
 	}
 }
 
@@ -150,18 +173,17 @@ func getEncodingStatus(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Access-Control-Allow-Origin", "*")
 	if r.Method == "GET" {
 		if val, ok := encodertochan[r.URL.Query().Get("guid")]; ok {
-			if (r.URL.Query().Get("action") == "status") {
+			if r.URL.Query().Get("action") == "status" {
 				result := <-val
-				_ , err := w.Write([]byte(result))
+				_, err := w.Write([]byte(result))
 				if err != nil {
 					log.Println("GETENCODINGSTATUS " + err.Error())
 					val <- result
 				}
 
-
 			} else {
 				var tmp = make(map[string]string)
-				data2 := <- val
+				data2 := <-val
 				tmp["status"] = data2
 				data, err := json.Marshal(tmp)
 				if err != nil {
@@ -169,7 +191,7 @@ func getEncodingStatus(w http.ResponseWriter, r *http.Request) {
 					w.WriteHeader(http.StatusInternalServerError)
 					return
 				}
-				_ , err = w.Write(data)
+				_, err = w.Write(data)
 				if err != nil {
 					log.Println("GETENCODINGSTATUS " + err.Error())
 					val <- data2
@@ -193,27 +215,26 @@ func getEncodingStatus(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-
-func LoadAllMediaAsPanels(panelspath string, manifest AddonManifest) ([]TemplateCustomPanel, error) {
+func LoadAllMediaAsPanels(panelspath string, manifest AddonManifest) ([]protocol.BasePanel, error) {
 	files, err := os.ReadDir(panelspath)
 	if err != nil {
 		log.Println(err)
-		return []TemplateCustomPanel{}, err
+		return []protocol.BasePanel{}, err
 	}
-	panels := []TemplateCustomPanel{}
+	panels := []protocol.BasePanel{}
 	for _, file := range files {
 		if file.IsDir() {
 			continue
 		}
 		guid := GenerateGUID()
 		filename := file.Name()
-		panel := TemplateCustomPanel{}
+		panel := protocol.BasePanel{}
 		panel.PanelType = FileNameToMediaType(filename)
-		panel.LoaderPanelID = filename + "_panel_" + manifest.Name + "_" + manifest.ClientID
-		url, err := url.Parse(fmt.Sprintf("http://127.0.0.1:%v",secureport))
+		panel.FixedPanelID = filename + "_panel_" + manifest.Name + "_" + manifest.ClientID
+		url, err := url.Parse(fmt.Sprintf("http://127.0.0.1:%v", secureport))
 		if err != nil {
 			log.Println(err)
-			return []TemplateCustomPanel{}, err
+			return []protocol.BasePanel{}, err
 		}
 		url.Path = "/mediaregistry"
 		q := url.Query()
@@ -227,26 +248,27 @@ func LoadAllMediaAsPanels(panelspath string, manifest AddonManifest) ([]Template
 	return panels, nil
 }
 
-func LoadAllMediaAsTemplateBackgrounds(backgroundspath string, manifest AddonManifest) ([]TemplateCustomBackground, error) {
+func LoadAllMediaAsTemplateBackgrounds(backgroundspath string, manifest AddonManifest) ([]protocol.BaseBackground, error) {
 	files, err := os.ReadDir(backgroundspath)
 	if err != nil {
 		log.Println(err)
-		return []TemplateCustomBackground{}, err
+		return []protocol.BaseBackground{}, err
 	}
-	backgrounds := []TemplateCustomBackground{}
+	backgrounds := []protocol.BaseBackground{}
 	for _, file := range files {
 		if file.IsDir() {
 			continue
 		}
 		guid := GenerateGUID()
 		filename := file.Name()
-		background := TemplateCustomBackground{}
+		background := protocol.BaseBackground{}
 		background.BackgroundType = FileNameToMediaType(filename)
-		background.LoaderBackgroundID = filename + "_background_" + manifest.Name + "_" + manifest.ClientID
-		url, err := url.Parse(fmt.Sprintf("http://127.0.0.1:%v",secureport))
+		fmt.Println("MEDIADEBG " + filename + "_background_" + manifest.Name + "_" + manifest.ClientID)
+		background.FixedBackgroundID = filename + "_background_" + manifest.Name + "_" + manifest.ClientID
+		url, err := url.Parse(fmt.Sprintf("http://127.0.0.1:%v", secureport))
 		if err != nil {
 			log.Println(err)
-			return []TemplateCustomBackground{}, err
+			return []protocol.BaseBackground{}, err
 		}
 		url.Path = "/mediaregistry"
 		q := url.Query()

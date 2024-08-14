@@ -9,7 +9,7 @@ import { StorageManager } from "./StorageManager";
 import { StorageDummy } from "./endpoints/storage";
 import { SharingDummy } from "./endpoints/sharing";
 import { PanelDummy } from "./endpoints/panel";
-import * as test from "./protocols/protocol"
+import * as protocol from "./protocols/protocol"
 import * as Type from "./types";
 import { BackgroundDummy } from "./endpoints/background";
 import { AddonDummy } from "./endpoints/addon";
@@ -33,7 +33,6 @@ console.log(Environment.controlPort);
 GetAddons().then((addons) => {
   Environment.addons = addons;
 });
-
 declare global {
   interface Window {
     setallowedorigins: (origins: string[]) => void;

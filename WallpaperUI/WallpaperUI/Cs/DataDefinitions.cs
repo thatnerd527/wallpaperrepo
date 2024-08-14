@@ -15,6 +15,25 @@ namespace WallpaperUI.Cs
             element = derser;
             return element;
         }
+
+        public static JsonElement BlankStringObject(this JsonElement element)
+        {
+            var obj = "{}";
+            var ser = JsonSerializer.Serialize(obj);
+            var derser = JsonSerializer.Deserialize<JsonElement>(ser);
+            element = derser;
+            return element;
+        }
+
+        public static JsonElement BlankString(this JsonElement element)
+        {
+            var obj = "";
+            var ser = JsonSerializer.Serialize(obj);
+            var derser = JsonSerializer.Deserialize<JsonElement>(ser);
+            element = derser;
+            return element;
+        }
+
         public static JsonElement Set(this JsonElement element, dynamic key, JsonObject value)
         {
             var dict = new Dictionary<dynamic, object>();
@@ -45,7 +64,7 @@ namespace WallpaperUI.Cs
         
     }
 
-    public class RecentBackground
+    public class RecentBackgroundOld
     {
         public string Filename { get; set; }
 
@@ -53,18 +72,19 @@ namespace WallpaperUI.Cs
 
         public string TimestampAddedNanos { get; set; }
 
-        public static RecentBackground FromDictionary(Dictionary<string,dynamic> data)
+        public static RecentBackgroundOld FromDictionary(Dictionary<string,dynamic> data)
         {
-            return new RecentBackground {
+            return new RecentBackgroundOld
+            {
                 Filename = data["filename"],
                 PersistentBackgroundID = data["persistentbackgroundid"],
                 TimestampAddedNanos = data["timestampaddednanos"]
             };
         }
 
-        public static RecentBackground FromJsonElement(JsonElement element)
+        public static RecentBackgroundOld FromJsonElement(JsonElement element)
         {
-            return new RecentBackground
+            return new RecentBackgroundOld
             {
                 Filename = element.GetProperty("filename").GetString()!,
                 PersistentBackgroundID = element.GetProperty("persistentbackgroundid").GetString()!,
@@ -74,23 +94,24 @@ namespace WallpaperUI.Cs
         }
     }
 
-    public class RecentColor
+    public class RecentColorOld
     {
         public string HexColor { get; set; }
 
         public string TimestampAddedNanos { get; set; }
 
-        public static RecentColor FromDictionary(Dictionary<string,dynamic> data)
+        public static RecentColorOld FromDictionary(Dictionary<string,dynamic> data)
         {
-            return new RecentColor {
+            return new RecentColorOld
+            {
                 HexColor = data["hexcolor"],
                 TimestampAddedNanos = data["timestampaddednanos"]
             };
         }
 
-        public static RecentColor FromJsonElement(JsonElement element)
+        public static RecentColorOld FromJsonElement(JsonElement element)
         {
-            return new RecentColor
+            return new RecentColorOld
             {
                 HexColor = element.GetProperty("hexcolor").GetString()!,
                 TimestampAddedNanos = element.GetProperty("timestampaddednanos").GetString()!
@@ -99,7 +120,7 @@ namespace WallpaperUI.Cs
         }
     }
 
-    public class SimpleBackgroundResponse
+    public class SimpleBackgroundResponseOld
     {
         public string EncodingGUID { get; set; }
         public string ResultFile { get; set; }
@@ -108,7 +129,7 @@ namespace WallpaperUI.Cs
         public string Error { get; set; }
 
         [JsonConstructor]
-        public SimpleBackgroundResponse(string EncodingGUID, string ResultFile, string Status, string error)
+        public SimpleBackgroundResponseOld(string EncodingGUID, string ResultFile, string Status, string error)
         {
             this.EncodingGUID = EncodingGUID;
             this.ResultFile = ResultFile;
@@ -116,9 +137,9 @@ namespace WallpaperUI.Cs
             this.Error = error;
         }
 
-        public static SimpleBackgroundResponse FromJsonElement(JsonElement x)
+        public static SimpleBackgroundResponseOld FromJsonElement(JsonElement x)
         {
-            SimpleBackgroundResponse simpleBackgroundResponse = new SimpleBackgroundResponse(
+            SimpleBackgroundResponseOld simpleBackgroundResponse = new SimpleBackgroundResponseOld(
                 x.GetProperty("guid").GetString()!,
                 x.GetProperty("resultfile").GetString()!,
                 x.GetProperty("status").GetString()!
@@ -127,10 +148,10 @@ namespace WallpaperUI.Cs
             return simpleBackgroundResponse;
         }
 
-        public SimpleBackgroundResponse Cloned()
+        public SimpleBackgroundResponseOld Cloned()
         {
             var serialized = JsonSerializer.Serialize( this );
-            return JsonSerializer.Deserialize<SimpleBackgroundResponse>(serialized);
+            return JsonSerializer.Deserialize<SimpleBackgroundResponseOld>(serialized);
         }
     }
 
@@ -286,158 +307,158 @@ namespace WallpaperUI.Cs
 
 
 
-    public class RuntimeCustomPanel
-    {
-        public string PanelType { get; }
-        public string LoaderPanelID { get; }
-        public string PersistentPanelID { get; set; }
-        public string PanelTitle { get; }
-        public string PanelContent { get; }
-        public double PanelRecommendedWidth { get; }
-        public double PanelRecommendedHeight { get; }
-        public double PanelMinWidth { get; }
-        public double PanelMinHeight { get; }
-        public double PanelMaxWidth { get; }
-        public double PanelMaxHeight { get; }
-        public double PersistentPanelWidth { get; set; }
-        public double PersistentPanelHeight { get; set; }
-        public double PanelRecommendedX { get; }
-        public double PanelRecommendedY { get; }
-        public double PersistentPanelX { get; set; }
-        public double PersistentPanelY { get; set; }
-        public int ControlPort { get; }
-        public bool Deleted { get; }
-        public string PersistentPanelData { get; set; }
-        public string PanelIcon { get; }
-        public string ClientID { get; }
+   // public class RuntimeCustomPanel
+   // {
+   //     public string PanelType { get; }
+   //     public string LoaderPanelID { get; }
+   //     public string PersistentPanelID { get; set; }
+   //     public string PanelTitle { get; }
+   //     public string PanelContent { get; }
+   //     public double PanelRecommendedWidth { get; }
+   //     public double PanelRecommendedHeight { get; }
+   //     public double PanelMinWidth { get; }
+   //     public double PanelMinHeight { get; }
+   //     public double PanelMaxWidth { get; }
+   //     public double PanelMaxHeight { get; }
+   //     public double PersistentPanelWidth { get; set; }
+   //     public double PersistentPanelHeight { get; set; }
+   //     public double PanelRecommendedX { get; }
+   //     public double PanelRecommendedY { get; }
+   //     public double PersistentPanelX { get; set; }
+   //     public double PersistentPanelY { get; set; }
+   //     public int ControlPort { get; }
+   //     public bool Deleted { get; }
+   //     public string PersistentPanelData { get; set; }
+   //     public string PanelIcon { get; }
+   //     public string ClientID { get; }
 
-        public RuntimeCustomPanel(string panelType, string loaderPanelID, string persistentPanelID, string panelTitle, string panelContent, double panelRecommendedWidth, double panelRecommendedHeight, double panelMinWidth, double panelMinHeight, double panelMaxWidth, double panelMaxHeight, double persistentPanelWidth, double persistentPanelHeight, double panelRecommendedX, double panelRecommendedY, double persistentPanelX, double persistentPanelY, int controlPort, bool deleted, string persistentPanelData, string panelIcon, string clientID)
-        {
-            PanelType = panelType;
-            LoaderPanelID = loaderPanelID;
-            PersistentPanelID = persistentPanelID;
-            PanelTitle = panelTitle;
-            PanelContent = panelContent;
-            PanelRecommendedWidth = panelRecommendedWidth;
-            PanelRecommendedHeight = panelRecommendedHeight;
-            PanelMinWidth = panelMinWidth;
-            PanelMinHeight = panelMinHeight;
-            PanelMaxWidth = panelMaxWidth;
-            PanelMaxHeight = panelMaxHeight;
-            PersistentPanelWidth = persistentPanelWidth;
-            PersistentPanelHeight = persistentPanelHeight;
-            PanelRecommendedX = panelRecommendedX;
-            PanelRecommendedY = panelRecommendedY;
-            PersistentPanelX = persistentPanelX;
-            PersistentPanelY = persistentPanelY;
-            ControlPort = controlPort;
-            Deleted = deleted;
-            PersistentPanelData = persistentPanelData;
-            PanelIcon = panelIcon;
-            ClientID = clientID;
-        }
+   //     public RuntimeCustomPanel(string panelType, string loaderPanelID, string persistentPanelID, string panelTitle, string panelContent, double panelRecommendedWidth, double panelRecommendedHeight, double panelMinWidth, double panelMinHeight, double panelMaxWidth, double panelMaxHeight, double persistentPanelWidth, double persistentPanelHeight, double panelRecommendedX, double panelRecommendedY, double persistentPanelX, double persistentPanelY, int controlPort, bool deleted, string persistentPanelData, string panelIcon, string clientID)
+   //     {
+   //         PanelType = panelType;
+   //         LoaderPanelID = loaderPanelID;
+   //         PersistentPanelID = persistentPanelID;
+   //         PanelTitle = panelTitle;
+   //         PanelContent = panelContent;
+   //         PanelRecommendedWidth = panelRecommendedWidth;
+   //         PanelRecommendedHeight = panelRecommendedHeight;
+   //         PanelMinWidth = panelMinWidth;
+   //         PanelMinHeight = panelMinHeight;
+   //         PanelMaxWidth = panelMaxWidth;
+   //         PanelMaxHeight = panelMaxHeight;
+   //         PersistentPanelWidth = persistentPanelWidth;
+   //         PersistentPanelHeight = persistentPanelHeight;
+   //         PanelRecommendedX = panelRecommendedX;
+   //         PanelRecommendedY = panelRecommendedY;
+   //         PersistentPanelX = persistentPanelX;
+   //         PersistentPanelY = persistentPanelY;
+   //         ControlPort = controlPort;
+   //         Deleted = deleted;
+   //         PersistentPanelData = persistentPanelData;
+   //         PanelIcon = panelIcon;
+   //         ClientID = clientID;
+   //     }
 
-        public static RuntimeCustomPanel FromJsonElement(JsonElement x)
-        {
-            RuntimeCustomPanel runtimeCustomPanel = new RuntimeCustomPanel(
-        x.GetProperty("PanelType").GetString()!,
-    x.GetProperty("LoaderPanelID").GetString()!,
-        x.GetProperty("PersistentPanelID").GetString()!,
-   x.GetProperty("PanelTitle").GetString()!,
-   x.GetProperty("PanelContent").GetString()!,
-   x.GetProperty("PanelRecommendedWidth").GetDouble(),
-   x.GetProperty("PanelRecommendedHeight").GetDouble(),
-   x.GetProperty("PanelMinWidth").GetDouble(),
-   x.GetProperty("PanelMinHeight").GetDouble(),
-   x.GetProperty("PanelMaxWidth").GetDouble(),
-   x.GetProperty("PanelMaxHeight").GetDouble(),
-   x.GetProperty("PersistentPanelWidth").GetDouble(),
-   x.GetProperty("PersistentPanelHeight").GetDouble(),
-      x.GetProperty("PanelRecommendedX").GetDouble(),
-   x.GetProperty("PanelRecommendedY").GetDouble(),
-   x.GetProperty("PersistentPanelX").GetDouble(),
-   x.GetProperty("PersistentPanelY").GetDouble(),
-   x.GetProperty("ControlPort").GetInt32(),
-   x.GetProperty("Deleted").GetBoolean(),
-   x.GetProperty("PersistentPanelData").GetString()!,
-   x.GetProperty("PanelIcon").GetString()!,
-   x.GetProperty("ClientID").GetString()!
-    );
-            return runtimeCustomPanel;
-        }
+   //     public static RuntimeCustomPanel FromJsonElement(JsonElement x)
+   //     {
+   //         RuntimeCustomPanel runtimeCustomPanel = new RuntimeCustomPanel(
+   //     x.GetProperty("PanelType").GetString()!,
+   // x.GetProperty("LoaderPanelID").GetString()!,
+   //     x.GetProperty("PersistentPanelID").GetString()!,
+   //x.GetProperty("PanelTitle").GetString()!,
+   //x.GetProperty("PanelContent").GetString()!,
+   //x.GetProperty("PanelRecommendedWidth").GetDouble(),
+   //x.GetProperty("PanelRecommendedHeight").GetDouble(),
+   //x.GetProperty("PanelMinWidth").GetDouble(),
+   //x.GetProperty("PanelMinHeight").GetDouble(),
+   //x.GetProperty("PanelMaxWidth").GetDouble(),
+   //x.GetProperty("PanelMaxHeight").GetDouble(),
+   //x.GetProperty("PersistentPanelWidth").GetDouble(),
+   //x.GetProperty("PersistentPanelHeight").GetDouble(),
+   //   x.GetProperty("PanelRecommendedX").GetDouble(),
+   //x.GetProperty("PanelRecommendedY").GetDouble(),
+   //x.GetProperty("PersistentPanelX").GetDouble(),
+   //x.GetProperty("PersistentPanelY").GetDouble(),
+   //x.GetProperty("ControlPort").GetInt32(),
+   //x.GetProperty("Deleted").GetBoolean(),
+   //x.GetProperty("PersistentPanelData").GetString()!,
+   //x.GetProperty("PanelIcon").GetString()!,
+   //x.GetProperty("ClientID").GetString()!
+   // );
+   //         return runtimeCustomPanel;
+   //     }
 
-        public RuntimeCustomPanel Cloned()
-        {
-            var serialized = JsonSerializer.Serialize( this );
-            return JsonSerializer.Deserialize<RuntimeCustomPanel>( serialized );
-        }
-    }
+   //     public RuntimeCustomPanel Cloned()
+   //     {
+   //         var serialized = JsonSerializer.Serialize( this );
+   //         return JsonSerializer.Deserialize<RuntimeCustomPanel>( serialized );
+   //     }
+   // }
 
-    public class TemplateCustomPanel
-    {
-        public string PanelType { get; }
-        public string LoaderPanelID { get; }
-        public string PanelTitle { get; }
-        public string PanelContent { get; }
-        public double PanelRecommendedWidth { get; }
-        public double PanelRecommendedHeight { get; }
-        public double PanelMinWidth { get; }
-        public double PanelMinHeight { get; }
-        public double PanelMaxWidth { get; }
-        public double PanelMaxHeight { get; }
-        public double PanelRecommendedX { get; }
-        public double PanelRecommendedY { get; }
-        public string PanelDefaultData { get; }
-        public string PanelIcon { get; }
-        public string ClientID { get; }
+   // public class TemplateCustomPanel
+   // {
+   //     public string PanelType { get; }
+   //     public string LoaderPanelID { get; }
+   //     public string PanelTitle { get; }
+   //     public string PanelContent { get; }
+   //     public double PanelRecommendedWidth { get; }
+   //     public double PanelRecommendedHeight { get; }
+   //     public double PanelMinWidth { get; }
+   //     public double PanelMinHeight { get; }
+   //     public double PanelMaxWidth { get; }
+   //     public double PanelMaxHeight { get; }
+   //     public double PanelRecommendedX { get; }
+   //     public double PanelRecommendedY { get; }
+   //     public string PanelDefaultData { get; }
+   //     public string PanelIcon { get; }
+   //     public string ClientID { get; }
 
-        public TemplateCustomPanel(string panelType, string loaderPanelID, string panelTitle, string panelContent, double panelRecommendedWidth, double panelRecommendedHeight, double panelMinWidth, double panelMinHeight, double panelMaxWidth, double panelMaxHeight, double panelRecommendedX, double panelRecommendedY, string panelDefaultData, string panelIcon, string clientID)
-        {
-            PanelType = panelType;
-            LoaderPanelID = loaderPanelID;
-            PanelTitle = panelTitle;
-            PanelContent = panelContent;
-            PanelRecommendedWidth = panelRecommendedWidth;
-            PanelRecommendedHeight = panelRecommendedHeight;
-            PanelMinWidth = panelMinWidth;
-            PanelMinHeight = panelMinHeight;
-            PanelMaxWidth = panelMaxWidth;
-            PanelMaxHeight = panelMaxHeight;
-            PanelRecommendedX = panelRecommendedX;
-            PanelRecommendedY = panelRecommendedY;
-            PanelDefaultData = panelDefaultData;
-            PanelIcon = panelIcon;
-            ClientID = clientID;
-        }
+   //     public TemplateCustomPanel(string panelType, string loaderPanelID, string panelTitle, string panelContent, double panelRecommendedWidth, double panelRecommendedHeight, double panelMinWidth, double panelMinHeight, double panelMaxWidth, double panelMaxHeight, double panelRecommendedX, double panelRecommendedY, string panelDefaultData, string panelIcon, string clientID)
+   //     {
+   //         PanelType = panelType;
+   //         LoaderPanelID = loaderPanelID;
+   //         PanelTitle = panelTitle;
+   //         PanelContent = panelContent;
+   //         PanelRecommendedWidth = panelRecommendedWidth;
+   //         PanelRecommendedHeight = panelRecommendedHeight;
+   //         PanelMinWidth = panelMinWidth;
+   //         PanelMinHeight = panelMinHeight;
+   //         PanelMaxWidth = panelMaxWidth;
+   //         PanelMaxHeight = panelMaxHeight;
+   //         PanelRecommendedX = panelRecommendedX;
+   //         PanelRecommendedY = panelRecommendedY;
+   //         PanelDefaultData = panelDefaultData;
+   //         PanelIcon = panelIcon;
+   //         ClientID = clientID;
+   //     }
 
-        public static TemplateCustomPanel FromJsonElement(JsonElement x)
-        {
-            TemplateCustomPanel templateCustomPanel = new TemplateCustomPanel(
-                    x.GetProperty("PanelType").GetString()!,
-                    x.GetProperty("LoaderPanelID").GetString()!,
-                    x.GetProperty("PanelTitle").GetString()!,
-                    x.GetProperty("PanelContent").GetString()!,
-                    x.GetProperty("PanelRecommendedWidth").GetDouble(),
-                    x.GetProperty("PanelRecommendedHeight").GetDouble(),
-                    x.GetProperty("PanelMinWidth").GetDouble(),
-                    x.GetProperty("PanelMinHeight").GetDouble(),
-                    x.GetProperty("PanelMaxWidth").GetDouble(),
-                    x.GetProperty("PanelMaxHeight").GetDouble(),
-                    x.GetProperty("PanelRecommendedX").GetDouble(),
-                    x.GetProperty("PanelRecommendedY").GetDouble(),
-                    x.GetProperty("PanelDefaultData").GetString()!,
-                    x.GetProperty("PanelIcon").GetString()!,
-                    x.GetProperty("ClientID").GetString()!
-                );
-            return templateCustomPanel;
-        }
+   //     public static TemplateCustomPanel FromJsonElement(JsonElement x)
+   //     {
+   //         TemplateCustomPanel templateCustomPanel = new TemplateCustomPanel(
+   //                 x.GetProperty("PanelType").GetString()!,
+   //                 x.GetProperty("LoaderPanelID").GetString()!,
+   //                 x.GetProperty("PanelTitle").GetString()!,
+   //                 x.GetProperty("PanelContent").GetString()!,
+   //                 x.GetProperty("PanelRecommendedWidth").GetDouble(),
+   //                 x.GetProperty("PanelRecommendedHeight").GetDouble(),
+   //                 x.GetProperty("PanelMinWidth").GetDouble(),
+   //                 x.GetProperty("PanelMinHeight").GetDouble(),
+   //                 x.GetProperty("PanelMaxWidth").GetDouble(),
+   //                 x.GetProperty("PanelMaxHeight").GetDouble(),
+   //                 x.GetProperty("PanelRecommendedX").GetDouble(),
+   //                 x.GetProperty("PanelRecommendedY").GetDouble(),
+   //                 x.GetProperty("PanelDefaultData").GetString()!,
+   //                 x.GetProperty("PanelIcon").GetString()!,
+   //                 x.GetProperty("ClientID").GetString()!
+   //             );
+   //         return templateCustomPanel;
+   //     }
 
-        public TemplateCustomPanel Cloned()
-        {
-            var serialized = JsonSerializer.Serialize( this );
-            return JsonSerializer.Deserialize<TemplateCustomPanel>(serialized);
-        }
-    }
+   //     public TemplateCustomPanel Cloned()
+   //     {
+   //         var serialized = JsonSerializer.Serialize( this );
+   //         return JsonSerializer.Deserialize<TemplateCustomPanel>(serialized);
+   //     }
+   // }
 
     public class PanelHeader
     {

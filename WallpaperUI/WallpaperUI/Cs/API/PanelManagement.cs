@@ -7,9 +7,9 @@ namespace WallpaperUI.Cs.API
     public class PanelManagement
     {
         [JSInvokable]
-        public static void ClosePanel(string persistentpanelid)
+        public static void ClosePanel(string fixedpanelid)
         {
-            Home.panels.RemoveAll(x => x.PersistentPanelID == persistentpanelid);
+            Home.panels.RemoveAll(x => x.BasePanel.FixedPanelID == fixedpanelid);
             Home.Instance.UpdatePanelData();
         }
 
@@ -21,78 +21,78 @@ namespace WallpaperUI.Cs.API
         }
 
         [JSInvokable]
-        public static string GetPanelSize(string persistentpanelid)
+        public static string GetPanelSize(string uniquepanelid)
         {
-            var panel = Home.panels.FirstOrDefault(x => x.PersistentPanelID == persistentpanelid);
-            return panel == null ? "" : $"{panel.PersistentPanelWidth},{panel.PersistentPanelHeight}";
+            var panel = Home.panels.FirstOrDefault(x => x.UniquePanelID == uniquepanelid);
+            return panel == null ? "" : $"{panel.PanelWidth},{panel.PanelHeight}";
         }
 
         [JSInvokable]
-        public static void SetPanelSize(string persistentpanelid, double width, double height)
+        public static void SetPanelSize(string uniquepanelid, double width, double height)
         {
-            var panel = Home.panels.FirstOrDefault(x => x.PersistentPanelID == persistentpanelid);
+            var panel = Home.panels.FirstOrDefault(x => x.UniquePanelID == uniquepanelid);
             if (panel != null)
             {
-                panel.PersistentPanelWidth = width;
-                panel.PersistentPanelHeight = height;
+                panel.PanelWidth = width;
+                panel.PanelHeight = height;
                 Home.Instance.UpdatePanelData();
             }
             App.SavePanelData(Home.panels);
         }
 
         [JSInvokable]
-        public static string GetPanelPosition(string persistentpanelid)
+        public static string GetPanelPosition(string uniquepanelid)
         {
-            var panel = Home.panels.FirstOrDefault(x => x.PersistentPanelID == persistentpanelid);
-            return panel == null ? "" : $"{panel.PersistentPanelX},{panel.PersistentPanelY}";
+            var panel = Home.panels.FirstOrDefault(x => x.UniquePanelID == uniquepanelid);
+            return panel == null ? "" : $"{panel.PanelX},{panel.PanelY}";
         }
 
         [JSInvokable]
-        public static void SetPanelPosition(string persistentpanelid, double x, double y)
+        public static void SetPanelPosition(string uniquepanelid, double x, double y)
         {
-            var panel = Home.panels.FirstOrDefault(x => x.PersistentPanelID == persistentpanelid);
+            var panel = Home.panels.FirstOrDefault(x => x.UniquePanelID == uniquepanelid);
             if (panel != null)
             {
-                panel.PersistentPanelX = x;
-                panel.PersistentPanelY = y;
+                panel.PanelX = x;
+                panel.PanelY = y;
                 Home.Instance.UpdatePanelData();
             }
             App.SavePanelData(Home.panels);
         }
 
         [JSInvokable]
-        public static string GetPanelVisibility(string persistentpanelid)
+        public static string GetPanelVisibility(string uniquepanelid)
         {
-            var panel = Home.panels.FirstOrDefault(x => x.PersistentPanelID == persistentpanelid);
+            var panel = Home.panels.FirstOrDefault(x => x.UniquePanelID == uniquepanelid);
             return panel == null ? "" : panel.Deleted ? "hidden" : "visible";
         }
 
         [JSInvokable]
-        public static void SetPanelData(string persistentpanelid, string data)
+        public static void SetPanelData(string uniquepanelid, string data)
         {
-            var panel = Home.panels.FirstOrDefault(x => x.PersistentPanelID==persistentpanelid);
+            var panel = Home.panels.FirstOrDefault(x => x.UniquePanelID == uniquepanelid);
             if (panel != null)
             {
-                panel.PersistentPanelData = data;
+                panel.UniquePanelID = data;
                 Home.Instance.UpdatePanelData();
             }
         }
 
         [JSInvokable]
-        public static string GetPanelData(string persistentpanelid)
+        public static string GetPanelData(string uniquepanelid)
         {
-            var panel = Home.panels.FirstOrDefault(x => x.PersistentPanelID == persistentpanelid);
-            return panel == null ? "" : panel.PersistentPanelData;
+            var panel = Home.panels.FirstOrDefault(x => x.UniquePanelID == uniquepanelid);
+            return panel == null ? "" : panel.UniquePanelID;
         }
 
         [JSInvokable]
-        public static void SetPanelHeader(string persistentpanelid, bool titlebarvisible, bool enableresize, bool enableclose, bool enabledrag)
+        public static void SetPanelHeader(string uniquepanelid, bool titlebarvisible, bool enableresize, bool enableclose, bool enabledrag)
         {
-            var panel = Home.panels.FirstOrDefault(x => x.PersistentPanelID == persistentpanelid);
-            var exists = Home.panelHeaders.Any(x => x.persistentpanelid == persistentpanelid);
+            var panel = Home.panels.FirstOrDefault(x => x.UniquePanelID == uniquepanelid);
+            var exists = Home.panelHeaders.Any(x => x.persistentpanelid == uniquepanelid);
             if (exists)
             {
-                var res = Home.panelHeaders.FirstOrDefault(x => x.persistentpanelid==persistentpanelid)!;
+                var res = Home.panelHeaders.FirstOrDefault(x => x.persistentpanelid==uniquepanelid)!;
                 res.titlebarvisible = titlebarvisible;
                 res.enableresize = enableresize;
                 res.enableclose = enableclose;
@@ -100,7 +100,7 @@ namespace WallpaperUI.Cs.API
             } else
             {
                 var header = new PanelHeader();
-                header.persistentpanelid = persistentpanelid;
+                header.persistentpanelid = uniquepanelid;
                 header.titlebarvisible = titlebarvisible;
                 header.enableresize = enableresize;
                 header.enableclose = enableclose;

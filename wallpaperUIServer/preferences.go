@@ -7,18 +7,22 @@ import (
 	"net/http"
 	"os"
 	"reflect"
+	"sync"
+	"wallpaperuiserver/protocol"
 
 	"github.com/gorilla/websocket"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
 )
 
 type PreferenceUpdate struct {
-	prefdict map[string]interface{}
+	prefdict protocol.AppSettings
 	ClientID string
 	Stop     bool
 }
 
 var preferenceschannel = CreateMessageHub[PreferenceUpdate]()
-var cachedpreferences map[string]interface{} = make(map[string]interface{})
+var cachedpreferences Preferences = Preferences{prefs: protocol.AppSettings{}}
 
 // DeepEqual compares two maps deeply
 func DeepEqual(map1, map2 map[string]interface{}) bool {
@@ -102,28 +106,30 @@ func preferencesSystem(w http.ResponseWriter, r *http.Request) {
 		}
 		file.Close()
 	}
-	parsed := make(map[string]interface{})
+	parsed := protocol.AppSettings{}
+
 	file, err := os.ReadFile("preferences.json")
 	if err != nil {
 		log.Println("read:", err)
 		return
 	}
-	err = json.Unmarshal(file, &parsed)
+	err = protojson.Unmarshal(file, &parsed)
+	cachedpreferences.Write(func(prefs protocol.AppSettings) protocol.AppSettings {return parsed})
 	if err != nil {
 		log.Println("json:", err)
 		return
 	}
-	encoded, err := json.Marshal(parsed)
+	encoded, err := proto.Marshal(&parsed)
 	if err != nil {
 		log.Println("json:", err)
 		return
 	}
-	err = c.WriteMessage(websocket.TextMessage, encoded)
+	err = c.WriteMessage(websocket.BinaryMessage, encoded)
 	if err != nil {
 		log.Println("write:", err)
 		return
 	}
-	cachedpreferences = parsed
+
 
 	go func() {
 		for {
@@ -134,19 +140,16 @@ func preferencesSystem(w http.ResponseWriter, r *http.Request) {
 			if msg.Stop && msg.ClientID == clientid {
 				break
 			}
-			if msg.prefdict == nil {
-				continue;
-			}
 			if msg.ClientID == clientid {
 				continue;
 			}
 			parsed := msg.prefdict
-			encoded, err := json.Marshal(parsed)
+			encoded, err := proto.Marshal(&parsed)
 			if err != nil {
 				log.Println("json:", err)
 				break
 			}
-			err = c.WriteMessage(websocket.TextMessage, encoded)
+			err = c.WriteMessage(websocket.BinaryMessage, encoded)
 			if err != nil {
 				log.Println("write:", err)
 				break
@@ -157,17 +160,17 @@ func preferencesSystem(w http.ResponseWriter, r *http.Request) {
 		_, message, err := c.ReadMessage()
 		if err != nil {
 			log.Println("read:", err)
-			preferenceschannel.SendMessage(PreferenceUpdate{nil, clientid, true})
+			preferenceschannel.SendMessage(PreferenceUpdate{protocol.AppSettings{}, clientid, true})
 			break
 		}
-		var parsed map[string]interface{}
-		os.WriteFile("preferences.json", message, 0644)
+		parsed := protocol.AppSettings{}
+		//os.WriteFile("preferences.json", message, 0644)
 
-		err = json.Unmarshal(message, &parsed)
-		if isJsonSame(parsed, cachedpreferences) {
+		err = proto.Unmarshal(message, &parsed)
+		if proto.Equal(&parsed,referenceify(cachedpreferences.Read())) {
 			continue
 		}
-		cachedpreferences = parsed
+		cachedpreferences.Write(func(prefs protocol.AppSettings) protocol.AppSettings {return parsed})
 
 		if err != nil {
 			log.Println("json:", err)
@@ -175,4 +178,55 @@ func preferencesSystem(w http.ResponseWriter, r *http.Request) {
 		}
 		preferenceschannel.SendMessage(PreferenceUpdate{parsed, clientid, false})
 	}
+}
+
+type Preferences struct {
+	prefs protocol.AppSettings
+	writeHandlers []func(protocol.AppSettings) protocol.AppSettings
+	writeLock bool
+	mut sync.Mutex
+}
+
+func (p *Preferences) AddWriteHandler(handler func(protocol.AppSettings) protocol.AppSettings) {
+	p.writeHandlers = append(p.writeHandlers, handler)
+}
+
+func (p *Preferences) Write(modifier func(protocol.AppSettings) protocol.AppSettings) {
+	p.mut.Lock()
+	cloned := proto.Clone(&p.prefs).(*protocol.AppSettings)
+	*cloned = p.PreventNulls(*cloned)
+	operated := modifier(*cloned)
+	p.prefs = *proto.Clone(&operated).(*protocol.AppSettings)
+	for _, handler := range p.writeHandlers {
+		cloned := proto.Clone(&p.prefs).(*protocol.AppSettings)
+		operated := handler(*cloned)
+		p.prefs = *proto.Clone(&operated).(*protocol.AppSettings)
+	}
+	p.mut.Unlock()
+}
+
+func (p *Preferences) Read() protocol.AppSettings {
+	return p.PreventNulls(*proto.Clone(&p.prefs).(*protocol.AppSettings))
+}
+
+func (p *Preferences) PreventNulls(p2 protocol.AppSettings) protocol.AppSettings {
+	if p2.RecentBackgroundStore == nil {
+		p2.RecentBackgroundStore = &protocol.RecentBackgroundStore{RecentBackgrounds: map[string]*protocol.RecentBackground{}}
+	}
+	if p2.RecentBackgroundStore.RecentBackgrounds == nil {
+		p2.RecentBackgroundStore.RecentBackgrounds = map[string]*protocol.RecentBackground{}
+	}
+	if p2.SimpleBackgroundsSystem == nil {
+		p2.SimpleBackgroundsSystem = &protocol.SimpleBackgroundsSystem{}
+	}
+	if p2.SimpleBackgroundsSystem.SimpleBackgrounds == nil {
+		p2.SimpleBackgroundsSystem.SimpleBackgrounds = []*protocol.SimpleBackground{}
+	}
+	if p2.RecentColorSystem == nil {
+		p2.RecentColorSystem = &protocol.RecentColorSystem{RecentColors: []*protocol.RecentColor{}}
+	}
+	if p2.RecentColorSystem.RecentColors == nil {
+		p2.RecentColorSystem.RecentColors = []*protocol.RecentColor{}
+	}
+	return p2
 }

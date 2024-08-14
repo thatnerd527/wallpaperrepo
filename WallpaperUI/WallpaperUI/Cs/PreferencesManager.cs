@@ -1,19 +1,21 @@
 ﻿using System.Text.Json;
 
+using Wallpaper.CommonLanguage;
+
 namespace WallpaperUI.Cs
 {
-    public class PreferencesManager
+    public class PreferencesManager2
     {
         private List<Func<Dictionary<string, dynamic>,Dictionary<string, dynamic>>> changeHandler = new();
         private Dictionary<string, dynamic> _preferences;
         public bool loopBreak = false;
 
-        public PreferencesManager()
+        public PreferencesManager2()
         {
             _preferences = new Dictionary<string, dynamic>();
 
         }
-        public PreferencesManager(Dictionary<string, dynamic> preferences)
+        public PreferencesManager2(Dictionary<string, dynamic> preferences)
         {
             _preferences = preferences;
         }
@@ -33,13 +35,13 @@ namespace WallpaperUI.Cs
             return _preferences;
         }
 
-        public PreferencesManager(List<Func<Dictionary<string, dynamic>, Dictionary<string, dynamic>>> changeHandler, Dictionary<string, dynamic> preferences)
+        public PreferencesManager2(List<Func<Dictionary<string, dynamic>, Dictionary<string, dynamic>>> changeHandler, Dictionary<string, dynamic> preferences)
         {
             this.changeHandler = changeHandler;
             _preferences = preferences;
         }
 
-        public PreferencesManager(Dictionary<string, dynamic> preferences, params Func<Dictionary<string, dynamic>, Dictionary<string, dynamic>>[] handlers)
+        public PreferencesManager2(Dictionary<string, dynamic> preferences, params Func<Dictionary<string, dynamic>, Dictionary<string, dynamic>>[] handlers)
         {
             this.changeHandler = handlers.ToList();
             _preferences = preferences;
@@ -113,6 +115,66 @@ namespace WallpaperUI.Cs
             {
                 _preferences = handler(_preferences);
             }
+        }
+    }
+
+    public class PreferencesManager
+    {
+        
+        private Wallpaper.CommonLanguage.AppSettings appSettings;
+        private List<Func<AppSettings, Task<AppSettings>>> writeHandlers;
+
+        public AppSettings Value => applyDefaults(appSettings.Clone());
+
+        public SimpleBackgroundsSystem SimpleBackgroundsSystem => Value.SimpleBackgroundsSystem == null ? new SimpleBackgroundsSystem() : Value.SimpleBackgroundsSystem;
+
+        public RecentBackgroundStore RecentBackgroundStore => Value.RecentBackgroundStore == null ? new RecentBackgroundStore() : Value.RecentBackgroundStore;
+
+        public RecentColorSystem RecentColorSystem => Value.RecentColorSystem == null ? new RecentColorSystem() : Value.RecentColorSystem;
+
+        public List<RuntimePanel> PanelsToSkip => Value.PanelsToSkip == null ? [] : Value.PanelsToSkip.ToList();
+
+        private AppSettings applyDefaults(AppSettings settings)
+        {
+            if (settings.RecentBackgroundStore == null)
+            {
+                settings.RecentBackgroundStore = new RecentBackgroundStore();
+            }
+            if (settings.RecentColorSystem == null)
+            {
+                settings.RecentColorSystem = new RecentColorSystem();
+            }
+            if (settings.SimpleBackgroundsSystem == null)
+            {
+                settings.SimpleBackgroundsSystem = new SimpleBackgroundsSystem();
+            }
+            return settings;
+        }
+
+        public async Task Write(Func<AppSettings,Task<AppSettings>> func)
+        {
+            var tmp = applyDefaults(appSettings.Clone());
+            appSettings = await func(tmp);
+
+            foreach (var item in writeHandlers)
+            {
+                appSettings = await item(appSettings.Clone());
+            }
+        }
+
+        public PreferencesManager()
+        {
+            appSettings = new AppSettings();
+            appSettings.RecentBackgroundStore = new RecentBackgroundStore();
+            appSettings.RecentColorSystem  = new RecentColorSystem();
+            appSettings.SimpleBackgroundsSystem = new SimpleBackgroundsSystem();
+            writeHandlers = new();
+        }
+
+        public Action AddWriteHandler(Func<AppSettings, Task<AppSettings>> func)
+        {
+            writeHandlers.Add(func);
+            return () => writeHandlers.Remove(func);
         }
     }
 }

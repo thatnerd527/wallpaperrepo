@@ -1,15 +1,16 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"os"
 	"path"
+	"wallpaperuiserver/protocol"
 
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
+	"google.golang.org/protobuf/proto"
 )
 
 type ShutdownRequest struct {
@@ -81,30 +82,44 @@ func popupIPC(w http.ResponseWriter, r *http.Request) {
 			if msg.popup_URL == "stop" {
 				break
 			}
-			data := make(map[string]interface{})
+			buf := protocol.PopupAppControlMessage{}
 			if msg.Type == "popup" {
-				data["Type"] = "popup"
-				data["popup_URL"] = msg.popup_URL
-				data["popup_ClientID"] = msg.popup_ClientID
-				data["popup_AppName"] = msg.popup_AppName
-				data["popup_Favicon"] = msg.popup_Favicon
-				data["popup_Title"] = msg.popup_Title
-				data["trackingID"] = msg.trackingID
+				buf.Type = protocol.PopupAppControlMessage_POPUP
+				buf.Message = &protocol.PopupAppControlMessage_PopupRequest{
+					PopupRequest: &protocol.PopupRequest{
+						URL: msg.popup_URL,
+						ClientID: msg.popup_ClientID,
+						AppName: msg.popup_AppName,
+						Favicon: msg.popup_Favicon,
+						Title: msg.popup_Title,
+						AutoAuthorize: false,
+						RequestID: msg.trackingID,
+					},
+				}
 			} else if msg.Type == "input" {
-				data["Type"] = "input"
-				data["input_Type"] = msg.input_Type
-				data["input_Placeholder"] = msg.input_Placeholder
-				data["input_MaxLength"] = msg.input_MaxLength
-				data["trackingID"] = msg.trackingID
+				buf.Type = protocol.PopupAppControlMessage_INPUT
+				buf.Message = &protocol.PopupAppControlMessage_InputRequest{
+					InputRequest: &protocol.InputRequest{
+						InputType: msg.input_Type,
+						InputPlaceholder: msg.input_Placeholder,
+						MaxLength: int32(msg.input_MaxLength),
+						RequestID: msg.trackingID,
+					},
+				}
 			} else if msg.Type == "stop" {
-				data["Type"] = "stop"
+				buf.Type = protocol.PopupAppControlMessage_SHUTDOWN
+				buf.Message = &protocol.PopupAppControlMessage_ShutdownRequest{
+					ShutdownRequest: &protocol.ShutdownRequest{
+
+					},
+				}
 			}
-			encoded, err := json.Marshal(data)
+			data2, err := proto.Marshal(&buf)
 			if err != nil {
-				log.Println("json:", err)
+				log.Println("proto:", err)
 				break
 			}
-			err = c.WriteMessage(websocket.TextMessage, encoded)
+			err = c.WriteMessage(websocket.TextMessage, data2)
 			if err != nil {
 				log.Println("write:", err)
 				break
@@ -113,24 +128,21 @@ func popupIPC(w http.ResponseWriter, r *http.Request) {
 	}()
 	for {
 		_, message, err := c.ReadMessage()
-		fmt.Println("Received message: ", string(message))
 		if err != nil {
 			popupchannel <- CreatePopupRequest("stop", "stop", "stop", "stop", "stop")
 			log.Println("read:", err)
 			break
 		}
-		decoded := string(message)
-		parsed := make(map[string]interface{})
-		err = json.Unmarshal([]byte(decoded), &parsed)
+		parsed := protocol.PopupAppResponse{}
+		err = proto.Unmarshal(message, &parsed)
 		if err != nil {
 			log.Println("json:", err)
 			break
 		}
-		cancelled := parsed["cancelled"].(bool)
-		if parsed["Type"] == "popup" {
-			popupresultchannel.SendMessage(CreatePopupResult(parsed["popup_ResultData"].(string), parsed["trackingID"].(string), cancelled))
-		} else if parsed["Type"] == "input" {
-			popupresultchannel.SendMessage(CreateInputResult(parsed["input_ResultData"].(string), parsed["trackingID"].(string), cancelled))
+		if parsed.Type == protocol.PopupAppResponse_POPUP {
+			popupresultchannel.SendMessage(CreatePopupResult(parsed.GetPopupResponse().ResultData, parsed.GetPopupResponse().GetRequestID(), parsed.Cancelled))
+		} else if parsed.Type == protocol.PopupAppResponse_INPUT {
+			popupresultchannel.SendMessage(CreateInputResult(parsed.GetInputResponse().ResultData, parsed.GetInputResponse().GetRequestID(), parsed.Cancelled))
 		}
 	}
 }

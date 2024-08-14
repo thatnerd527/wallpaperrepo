@@ -1,21 +1,20 @@
 ﻿
 <Card captionBar="@captionBar" stateChanged="(data) => {
-    runtimeCustomPanel.PersistentPanelX = data.X;
-    runtimeCustomPanel.PersistentPanelY = data.Y;
-    runtimeCustomPanel.PersistentPanelWidth = data.Width;
-    runtimeCustomPanel.PersistentPanelHeight = data.Height;
+    runtimeCustomPanel.PanelX = (int)data.X;
+    runtimeCustomPanel.PanelY = (int)data.Y;
+    runtimeCustomPanel.PanelWidth = (int)data.Width;
+    runtimeCustomPanel.PanelHeight = (int)data.Height;
     saveAction();
 
 }" 
-    MinHeight="@runtimeCustomPanel.PanelMinHeight"
-    MaxHeight="@runtimeCustomPanel.PanelMaxHeight"
-  
-   MinWidth="@runtimeCustomPanel.PanelMinWidth"
-   MaxWidth="@runtimeCustomPanel.PanelMaxWidth"
-      Width="@runtimeCustomPanel.PersistentPanelWidth"
-      Height="@runtimeCustomPanel.PersistentPanelHeight"
-      X="@runtimeCustomPanel.PersistentPanelX"
-   Y="@runtimeCustomPanel.PersistentPanelY"
+    MinHeight="@runtimeCustomPanel.BasePanel.PanelMinHeight"
+      MaxHeight="@runtimeCustomPanel.BasePanel.PanelMaxHeight"
+      MinWidth="@runtimeCustomPanel.BasePanel.PanelMinWidth"
+      MaxWidth="@runtimeCustomPanel.BasePanel.PanelMaxWidth"
+      Width="@runtimeCustomPanel.PanelWidth"
+      Height="@runtimeCustomPanel.PanelHeight"
+      X="@runtimeCustomPanel.PanelX"
+   Y="@runtimeCustomPanel.PanelY"
    panelHeader="@panelHeader"
    IsDraggable="@(panelHeader != null ? panelHeader.enabledrag : true)"
 >
@@ -23,9 +22,9 @@
 </Card>
 @code {
     [Parameter]
-    public RuntimeCustomPanel runtimeCustomPanel { get; set; }
+    public Wallpaper.CommonLanguage.RuntimePanel runtimeCustomPanel { get; set; }
 
-    public PanelHeader panelHeader => Home.panelHeaders.FirstOrDefault(x => x.persistentpanelid == runtimeCustomPanel.PersistentPanelID);
+    public PanelHeader panelHeader => Home.panelHeaders.FirstOrDefault(x => x.persistentpanelid == runtimeCustomPanel.UniquePanelID);
 
     [Parameter]
     public Action saveAction { get; set; }
@@ -63,19 +62,19 @@
     private RenderFragment RenderInternals2()
     {
         //Console.WriteLine(runtimeCustomPanel.PanelType);
-        switch (runtimeCustomPanel.PanelType)
+        switch (runtimeCustomPanel.BasePanel.PanelType)
         {
             case "System":
                 var guid = Guid.NewGuid().ToString();
-                return @<div>@(new MarkupString(runtimeCustomPanel.PanelContent))</div>;
+                return @<div>@(new MarkupString(runtimeCustomPanel.BasePanel.PanelContent))</div>;
             case "Embedded":
-                return@<iframe sandbox="allow-storage-access-by-user-activation allow-presentation allow-pointer-lock allow-modals allow-scripts allow-forms" class="h-full w-full" src="@runtimeCustomPanel.PanelContent"></iframe>;
+                return@<iframe sandbox="allow-storage-access-by-user-activation allow-presentation allow-pointer-lock allow-modals allow-scripts allow-forms" class="h-full w-full" src="@runtimeCustomPanel.BasePanel.PanelContent"></iframe>;
                 case "Image":
-                return @<img src="@runtimeCustomPanel.PanelContent" class="h-full w-full" />;
+                return @<img src="@runtimeCustomPanel.BasePanel.PanelContent" class="h-full w-full" />;
                 case "Video":
-                return @<video autoplay loop class="h-full w-full"><source src="@runtimeCustomPanel.PanelContent" type="video/mp4" /></video>;
+                return @<video autoplay loop class="h-full w-full"><source src="@runtimeCustomPanel.BasePanel.PanelContent" type="video/mp4" /></video>;
                 case "Audio":
-                return @<audio autoplay loop class="h-full w-full"><source src="@runtimeCustomPanel.PanelContent" type="audio/mpeg" /></audio>;
+                return @<audio autoplay loop class="h-full w-full"><source src="@runtimeCustomPanel.BasePanel.PanelContent" type="audio/mpeg" /></audio>;
             default:
                 return @<div>Unknown</div>;
         }

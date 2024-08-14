@@ -24,6 +24,7 @@
 @using System.Text.Json;
 @using System.Dynamic;
 @using WallpaperUI.Pages;
+@using Google.Protobuf;
 @inject IJSRuntime JS
 @code {
     public static App Instance = null;
@@ -38,13 +39,13 @@
     protected override async Task OnInitializedAsync()
     {
         Instance = this;
-        preferencesManager.AddChangeHandler((x) =>
+        preferencesManager.AddWriteHandler(async (x) =>
         {
             if (loopBreak)
             {
                 return x;
             }
-            SavePreferences(preferencesManager);
+            await SavePreferences(preferencesManager);
             return x;
         });
     }
@@ -79,18 +80,27 @@
     }
 
     [JSInvokable]
-    public static void UpdatePreferences(string data)
+    public static void UpdatePreferences(byte[] data)
     {
-
-        var result = JsonSerializer.Deserialize<Dictionary<string, dynamic>>(data);
+        if (data.Length == 0)
+        {
+            return;
+        }
+        var parsed = Wallpaper.CommonLanguage.AppSettings.Parser.ParseFrom(data)!;
+        var data2 = parsed!;
         App.Instance.loopBreak = true;
-        Instance.preferencesManager.SetFrom(result);
+        Instance.preferencesManager.Write(async (x) => parsed);
         App.Instance.loopBreak = false;
     }
 
-    public static void SavePreferences(PreferencesManager pm)
+    public static async Task SavePreferences(PreferencesManager pm)
     {
-        Instance.preferencesSystem.InvokeVoidAsync("send", pm.Serialized());
+        using (var stream = new MemoryStream())
+        {
+            pm.Value.WriteTo(stream);
+            var bytes = stream.ToArray();
+            await Instance.preferencesSystem.InvokeVoidAsync("send", bytes);
+        }
     }
 
     [JSInvokable]
@@ -133,9 +143,9 @@
     {
         JsonElement result = JsonSerializer.Deserialize<JsonElement>(data)!;
         var disabledAddons = result.EnumerateArray().Select(x =>
-        {
-            return AddonManifest.FromJsonElement(x);
-        });
+    {
+    return AddonManifest.FromJsonElement(x);
+    });
         Home.disabledAddons = disabledAddons.ToList();
         Home.Instance.UpdatePanelData();
         if (Addons.Instance != null)
@@ -146,18 +156,14 @@
     }
 
     [JSInvokable]
-    public static void UpdatePanelData(string data)
+    public static void UpdatePanelData(byte[] data)
     {
-        if (data == null || data == "null")
+        if (data.Length == 0)
         {
             return;
         }
-        JsonElement result = JsonSerializer.Deserialize<JsonElement>(data)!;
-        var lastActivePanels = result.EnumerateArray().Select(x =>
-    {
-    return RuntimeCustomPanel.FromJsonElement(x);
-    });
-        Home.panels = lastActivePanels.ToList();
+        var lastActivePanels = Wallpaper.CommonLanguage.RuntimePanelChangeRequest.Parser.ParseFrom(data);
+        Home.panels = lastActivePanels.PanelChanges.ToList();
         Home.Instance.UpdatePanelData();
         if (Panels.Instance != null)
         {
@@ -166,25 +172,15 @@
     }
 
     [JSInvokable]
-    public static void UpdateBackgroundData(string data)
+    public static void UpdateBackgroundData(byte[] data)
     {
-        if (data == null || data == "null")
+        if (data.Length == 0)
         {
             return;
         }
-        JsonElement result = JsonSerializer.Deserialize<JsonElement>(data)!;
-        var res = result.GetProperty("NewBackgrounds").ToString();
-
-        if (res == null || res.Length == 0)
-        {
-            return;
-        }
-        var lastActiveBackgrounds = result.GetProperty("NewBackgrounds").EnumerateArray().Select(x =>
-    {
-    return RuntimeCustomBackground.FromJsonElement(x);
-    });
-        Home.backgrounds = lastActiveBackgrounds.ToList();
-        Home.currentBackground = result.GetProperty("NewActiveBackground").GetString()!;
+        var lastActiveBackgrounds = Wallpaper.CommonLanguage.RuntimeBackgroundChangeRequest.Parser.ParseFrom(data);
+        Home.backgrounds = lastActiveBackgrounds.NewBackgrounds.ToList();
+        Home.currentBackground = lastActiveBackgrounds.NewActiveBackgroundID;
 
         Home.Instance.UpdatePanelData();
         if (Backgrounds.Instance != null)
@@ -193,33 +189,17 @@
         }
     }
 
-
     [JSInvokable]
-    public static void LoadPanelData(string data)
+    public static void LoadPanelData(byte[] data)
     {
-        if (data == null || data == "null")
+        if (data.Length == 0)
         {
             return;
         }
-        JsonElement result = JsonSerializer.Deserialize<JsonElement>(data)!;
-        var availablePanels = result.GetProperty("AvailablePanels").EnumerateArray().Select(x =>
-    {
-    return RuntimeCustomPanel.FromJsonElement(x);
-    });
-        var availableTemplatePanels = result.GetProperty("AvailableTemplatePanels").EnumerateArray().Select(x =>
-    {
-    return TemplateCustomPanel.FromJsonElement(x);
-    });
-        var lastActivePanels = result.GetProperty("LastActivePanels").EnumerateArray().Select(x =>
-    {
-    return RuntimeCustomPanel.FromJsonElement(x);
-    });
-        var deletedPanels = result.GetProperty("DeletedPanels").EnumerateArray().Select(x =>
-    {
-    return RuntimeCustomPanel.FromJsonElement(x);
-    });
-        Home.SetData(availablePanels.ToList(), availableTemplatePanels.ToList(), lastActivePanels.ToList(), deletedPanels.ToList());
-        var embeddedpanels = availablePanels.Where(x => x.PanelType == "Embedded").ToList();
+        var parsed = Wallpaper.CommonLanguage.PanelSystemInitialResponse.Parser.ParseFrom(data);
+        Console.WriteLine(parsed);
+        Home.SetData(parsed.InstancedButBlankPanels.ToList(), parsed.TemplatePanels.ToList(), parsed.InstancedPanelsFromStorage.ToList(), parsed.DeletedInstancedPanels.ToList());
+        var embeddedpanels = parsed.InstancedButBlankPanels.Where(x => x.BasePanel.PanelType == "Embedded").ToList();
         if (Panels.Instance != null)
         {
             Panels.Instance.Refresh();
@@ -227,28 +207,16 @@
     }
 
     [JSInvokable]
-    public static void LoadBackgroundData(string data)
+    public static void LoadBackgroundData(byte[] data)
     {
-        JsonElement result = JsonSerializer.Deserialize<JsonElement>(data)!;
-        var availableBackgrounds = result.GetProperty("AvailableBackgrounds").EnumerateArray().Select(x =>
-    {
-    return RuntimeCustomBackground.FromJsonElement(x);
-            });
-        var availableTemplateBackgrounds = result.GetProperty("AvailableTemplateBackgrounds").EnumerateArray().Select(x =>
-    {
-    return TemplateCustomBackground.FromJsonElement(x);
-    });
-        var lastActiveBackgrounds = result.GetProperty("LastActiveBackgrounds").EnumerateArray().Select(x =>
-    {
-    return RuntimeCustomBackground.FromJsonElement(x);
-    });
-        var deletedBackgrounds = result.GetProperty("DeletedBackgrounds").EnumerateArray().Select(x =>
-    {
-    return RuntimeCustomBackground.FromJsonElement(x);
-    });
-        var currentBackground = result.GetProperty("LastActiveBackgroundID").GetString()!;
-        Home.SetBackgroundData(availableBackgrounds.ToList(), availableTemplateBackgrounds.ToList(), lastActiveBackgrounds.ToList(), deletedBackgrounds.ToList(), currentBackground);
-        var embeddedBackgrounds = availableBackgrounds.Where(x => x.BackgroundType == "Embedded").ToList();
+        if (data.Length == 0)
+        {
+            return;
+        }
+        var parsed = Wallpaper.CommonLanguage.BackgroundSystemInitialResponse.Parser.ParseFrom(data);
+        Console.WriteLine(parsed);
+        Home.SetBackgroundData(parsed.InstancedButBlankBackgrounds.ToList(), parsed.TemplateBackgrounds.ToList(), parsed.InstancedBackgroundsFromStorage.ToList(), parsed.DeletedInstancedBackgrounds.ToList(), parsed.LastActiveBackgroundID);
+        var embeddedBackgrounds = parsed.InstancedButBlankBackgrounds.Where(x => x.BaseBackground.BackgroundType == "Embedded").ToList();
         if (Backgrounds.Instance != null)
         {
             Backgrounds.Instance.Refresh();
@@ -289,22 +257,31 @@
         Instance.backgroundSystem = ws;
     }
 
-    public static void SaveBackgroundData(List<RuntimeCustomBackground> panels)
+    public static void SaveBackgroundData(List<Wallpaper.CommonLanguage.RuntimeBackground> panels)
     {
         Console.WriteLine("Saving background data");
-        var request = new BackgroundUpdate();
-        request.NewBackgrounds = Home.backgrounds;
-        request.NewActiveBackground = Home.currentBackground;
-        var serialized = JsonSerializer.Serialize(request);
-        Console.WriteLine(serialized);
-        Instance.backgroundSystem.InvokeVoidAsync("send", serialized);
+        var request = new Wallpaper.CommonLanguage.RuntimeBackgroundChangeRequest();
+        request.NewBackgrounds.AddRange(Home.backgrounds);
+        request.NewActiveBackgroundID = Home.currentBackground;
+        using (var stream = new MemoryStream())
+        {
+            request.WriteTo(stream);
+            var bytes = stream.ToArray();
+            Instance.backgroundSystem.InvokeVoidAsync("send", bytes);
+        }
     }
 
-    public static void SavePanelData(List<RuntimeCustomPanel> panels)
+    public static void SavePanelData(List<Wallpaper.CommonLanguage.RuntimePanel> panels)
     {
         Console.WriteLine("Saving panel data");
-        var serialized = JsonSerializer.Serialize(panels);
-        Instance.panelSystem.InvokeVoidAsync("send", serialized);
+        var serialized = new Wallpaper.CommonLanguage.RuntimePanelChangeRequest();
+        serialized.PanelChanges.AddRange(panels);
+        using (var stream = new MemoryStream())
+        {
+            serialized.WriteTo(stream);
+            var bytes = stream.ToArray();
+            Instance.panelSystem.InvokeVoidAsync("send", bytes);
+        }
     }
 
     public static void DisableSelection()

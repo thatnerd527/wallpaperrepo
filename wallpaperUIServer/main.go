@@ -9,12 +9,15 @@ import (
 	"path"
 	"path/filepath"
 	"strconv"
+	"syscall"
 	"time"
+	"wallpaperuiserver/protocol"
 
 	"github.com/getlantern/systray"
 	"github.com/google/uuid"
 	"github.com/gorilla/websocket"
 	"github.com/orcaman/concurrent-map/v2"
+	"google.golang.org/protobuf/encoding/protojson"
 )
 
 var upgrader = websocket.Upgrader{}
@@ -73,6 +76,10 @@ func main() {
 		}
 		proc, err := os.FindProcess(pid)
 
+		if proc != nil && err == nil {
+			err = proc.Signal(syscall.Signal(0))
+			fmt.Println(err)
+		}
 		if err == nil {
 			fmt.Println("Already running")
 			fmt.Println("Found previous instance with pid", pid, "name: ",proc.Kill())
@@ -99,6 +106,14 @@ func main() {
 	if _, err := os.Stat("storage"); os.IsNotExist(err) {
 		os.Mkdir("storage", 0755)
 	}
+
+	cachedpreferences.AddWriteHandler(func(prefs protocol.AppSettings) protocol.AppSettings {
+		marshalled, _ := protojson.Marshal(&prefs)
+		os.WriteFile("preferences.json", marshalled, 0755)
+		preferenceschannel.SendMessage(PreferenceUpdate{prefs, GenerateGUID(), false})
+		return prefs
+	})
+
 
 	secureMux.HandleFunc("/storagesocket", storageHub)
 	secureMux.HandleFunc("/popupipc",popupIPC)
@@ -128,10 +143,6 @@ func main() {
 
 	redirectMux := http.NewServeMux()
 	redirectMux.HandleFunc("/redirect", redirectHandler)
-
-
-
-
 
 	go func() {
 		fmt.Println("Listening on port 8080")

@@ -1,8 +1,8 @@
 @echo off
 cd .\tools\protoc\bin
 echo Compiling with protoc.
-mkdir ../../../protodefs/proto/builtcs
-mkdir ../../../protodefs/proto/builtgo
+mkdir ..\..\..\protodefs\proto\builtcs
+mkdir ..\..\..\protodefs\proto\builtgo
 .\bash.exe -c "./protoc.exe ../../../protodefs/proto/*.proto --csharp_out=../../../protodefs/proto/builtcs --proto_path=../../../protodefs/proto --go_out="../../../protodefs/proto/builtgo" --go_opt=paths=source_relative"
 echo Copying protocols
 mkdir ..\..\..\wallpaperAPI\src\protocols
@@ -21,5 +21,11 @@ cmd /c npx pbts -o .\result\protocol.d.ts .\result\protocol.js
 echo Copying protocols.
 mkdir ..\..\WallpaperPopupApp\src\protocol
 xcopy .\result\* ..\..\WallpaperPopupApp\src\protocol /y /e
+cd ..\..\WallpaperPopupApp\subbuild
+node .\build.js
+cd ..\..\tools\pbjs
 mkdir ..\..\wallpaperAPI\src\protocols
 xcopy .\result\* ..\..\wallpaperAPI\src\protocols /y /e
+cd ..\..\wallpaperAPI\subbuild
+node .\build.js
+echo All done.

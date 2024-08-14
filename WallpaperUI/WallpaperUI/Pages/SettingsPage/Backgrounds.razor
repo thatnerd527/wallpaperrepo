@@ -37,24 +37,35 @@
                     var res = new UriBuilder(
                         new Uri("http://127.0.0.1:" + req + "/simplebackground")
                     );
-                    res.Query = "resultfilename=" + Guid.NewGuid().ToString();
-                    var result = await client.PostAsync(res.Uri, null);
-                    var data = await result.Content.ReadAsStringAsync();
+                    var request = new SimpleBackgroundRequest();
+                    var backgroundid = Guid.NewGuid().ToString();
+                    this.backgroundid = backgroundid;
+                    request.ResultFileName = backgroundid;
+                    request.RequestType = SimpleBackgroundRequest.Types.RequestType.Add;
+                    request.SimpleBackgroundID = backgroundid;
+                    HttpResponseMessage? result = null;
+                    using (var stream = new MemoryStream())
+                    {
+                        request.WriteTo(stream);
+                        result = await client.PostAsync(res.Uri, new ByteArrayContent(stream.ToArray()));
+                    }
+                    var data = await result.Content.ReadAsByteArrayAsync();
 
-                    var decoded = SimpleBackgroundResponse.FromJsonElement(JsonSerializer.Deserialize<JsonElement>(data)!);
-                    switch (decoded.Status) {
-                        case "cancelled":
+                    var decoded = SimpleBackgroundResponse.Parser.ParseFrom(data);
+                    switch (decoded.ResponseType) {
+                        case SimpleBackgroundResponse.Types.ResponseType.Cancelled:
                             return;
-                        case "errorprestart":
+                        case SimpleBackgroundResponse.Types.ResponseType.Failure:
                             encodingErrorInPrestart = true;
                             encodingError = true;
-                            error = decoded.Error;
+                            error = decoded.ErrorMessage;
                             showEncodingDialog = true;
-                            break;
-                        case "encoding":
-                        cancelEncoding = false;
-                            resultFile = decoded.ResultFile;
-                            encodingID = decoded.EncodingGUID;
+                            return;
+                        case SimpleBackgroundResponse.Types.ResponseType.Success:
+                            cancelEncoding = false;
+                            resultFile = decoded.ResultFilePath;
+                            encodingID = decoded.EncodingTicketID;
+                            originalFilePath = decoded.OriginalFilePath;
                             encodingError = false;
                             encodingErrorInPrestart = false;
                             showEncodingDialog = true;
@@ -82,8 +93,17 @@
                             showEncodingDialog = false;
                             break;
                         case "done":
-                            App.Instance.preferencesManager.Remove("simplebackground");
-                            App.Instance.preferencesManager.Set("simplebackground", resultFile);
+                            await App.Instance.preferencesManager.Write(async (x) => {
+                                x.SimpleBackgroundsSystem.SimpleBackgrounds.Add(new Wallpaper.CommonLanguage.SimpleBackground() {
+                                    BackgroundID = backgroundid,
+                                    FilePath = resultFile,
+                                    OriginalFilePath = decoded.OriginalFilePath,
+                                    TimestampAdded = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+                                });
+                                x.SimpleBackgroundsSystem.IsSimpleBackgroundEnabled = true;
+                                x.SimpleBackgroundsSystem.ActiveSimpleBackgroundID = backgroundid;
+                                return x;
+                            });
                             showEncodingDialog = false;
                             Home.currentBackground = "";
                             break;
@@ -102,7 +122,7 @@
     })">
             <FluentIcon Value="@(new Icons.Regular.Size24.Add())" Color="@Color.Neutral" />
         </div>
-        @foreach (var bkg in recentBackgrounds().OrderByDescending(x => Int64.Parse(x.Value.TimestampAddedNanos)))
+        @foreach (var bkg in recentBackgrounds().OrderByDescending(x => x.Value.TimestampAdded))
         {
            @renderRecentBackgroundItem(bkg);
         }
@@ -147,18 +167,18 @@
         {
             @renderRecentColorItem(item.Key, item.Value);
         }
-        <input type="color" class="opacity-0 w-0 h-0 max-h-0 max-h-0" @ref=@(colorRef) @onchange="(e) => {
+        <input type="color" class="opacity-0 w-0 h-0 max-h-0 max-h-0" @ref=@(colorRef) @onchange="async (e) => {
             var color = e.Value;
             var colorObj = new RecentColor() {
-                HexColor = (string)color,
-                TimestampAddedNanos = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds().ToString()
+                Color = (string)color,
+                TimestampAdded = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
 
             };
-            Home.AccentColor = (string)color;
-            AddRecentColor(colorObj);
+            await Home.SetAccentColor((string)color);
+            await AddRecentColor(colorObj);
             while (recentColors().Count > 5)
             {
-                RemoveOldestRecentColor();
+                await RemoveOldestRecentColor();
             }
         }">
             
@@ -435,8 +455,17 @@
                     var decoded2 = EncodingStatus.FromJsonElement(JsonSerializer.Deserialize<JsonElement>(data2)!);
                     switch (decoded2.Status) {
                         case "done":
-                            App.Instance.preferencesManager.Remove("simplebackground");
-                            App.Instance.preferencesManager.Set("simplebackground", resultFile);
+                            await App.Instance.preferencesManager.Write(async (x) => {
+                                x.SimpleBackgroundsSystem.SimpleBackgrounds.Add(new Wallpaper.CommonLanguage.SimpleBackground() {
+                                    BackgroundID = backgroundid,
+                                    FilePath = resultFile,
+                                    OriginalFilePath = originalFilePath,
+                                    TimestampAdded = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+                                });
+                                x.SimpleBackgroundsSystem.IsSimpleBackgroundEnabled = true;
+                                x.SimpleBackgroundsSystem.ActiveSimpleBackgroundID = backgroundid;
+                                return x;
+                            });
                             Home.currentBackground = "";
                             showEncodingDialog = false;
                             break;
@@ -484,8 +513,17 @@
 
                     switch (decoded2.Status) {
                         case "done":
-                            App.Instance.preferencesManager.Remove("simplebackground");
-                            App.Instance.preferencesManager.Set("simplebackground", resultFile);
+                            await App.Instance.preferencesManager.Write(async (x) => {
+                                x.SimpleBackgroundsSystem.SimpleBackgrounds.Add(new Wallpaper.CommonLanguage.SimpleBackground() {
+                                    BackgroundID = backgroundid,
+                                    FilePath = resultFile,
+                                    OriginalFilePath = originalFilePath,
+                                    TimestampAdded = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+                                });
+                                x.SimpleBackgroundsSystem.IsSimpleBackgroundEnabled = true;
+                                x.SimpleBackgroundsSystem.ActiveSimpleBackgroundID = backgroundid;
+                                return x;
+                            });
                             Home.currentBackground = "";
                             showEncodingDialog = false;
                             break;
@@ -535,70 +573,73 @@
 @inject IJSRuntime JS
 @using System.Text.Json;
 @using System.Text.Json.Nodes;
+@using Google.Protobuf;
+@using Wallpaper.CommonLanguage;
+
 @code {
     private HttpClient client = null;
     public static Backgrounds Instance = null;
     private bool showEncodingDialog = false;
     private bool showAskMediaTypeDialog = false;
     private string encodingID = "";
+    private string backgroundid = "";
     private string error = "";
     private string resultFile = "";
+    private string originalFilePath = "";
     private bool encodingError = false;
     private bool cancelEncoding = false;
     private bool encodingErrorInPrestart = false;
     private bool recentBackgroundsOpen = false;
     private ElementReference colorRef;
 
-    private Dictionary<string, RecentBackground> recentBackgrounds()
+    private Dictionary<string, RecentBackground> recentBackgrounds() => App.Instance.preferencesManager.RecentBackgroundStore.RecentBackgrounds.ToDictionary(x => x.Key, x => x.Value);
+
+    private async Task AddSimpleBackground(string filepath, string originalfilepath)
     {
-        
-        if (App.Instance.preferencesManager.GetPreferences().TryGetValue("recentbackgrounds", out var bkgs))
+        await App.Instance.preferencesManager.Write(async (x) =>
         {
-            JsonElement elem = bkgs;
-            return elem.EnumerateObject()
-            .Select(x => new KeyValuePair<string, RecentBackground>(x.Name, RecentBackground.FromJsonElement(x.Value)))
-            .ToDictionary(x => x.Key, x => x.Value);
-        }
-        else
-        {
-            return [];
-        }
+            x.SimpleBackgroundsSystem.SimpleBackgrounds.Add(new Wallpaper.CommonLanguage.SimpleBackground()
+            {
+                FilePath = filepath,
+                OriginalFilePath = originalfilepath,
+                TimestampAdded = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+            });
+            x.SimpleBackgroundsSystem.IsSimpleBackgroundEnabled = true;
+            x.SimpleBackgroundsSystem.ActiveSimpleBackgroundID = Guid.NewGuid().ToString();
+            return x;
+        });
     }
 
-    private Dictionary<string, RecentColor> recentColors()
+    private async Task SetSimpleBackground(string bkg)
     {
-        if (App.Instance.preferencesManager.GetPreferences().TryGetValue("recentcolors", out var colors))
+        await App.Instance.preferencesManager.Write(async (x) =>
         {
-            JsonElement elem = colors;
-            return elem.EnumerateObject()
-            .Select(x => new KeyValuePair<string, RecentColor>(x.Name, RecentColor.FromJsonElement(x.Value)))
-            .ToDictionary(x => x.Key, x => x.Value);
-        }
-        else
-        {
-            return [];
-        }
+            x.SimpleBackgroundsSystem.ActiveSimpleBackgroundID = bkg;
+            x.SimpleBackgroundsSystem.IsSimpleBackgroundEnabled = true;
+            return x;
+        });
     }
 
-    private void AddRecentColor(RecentColor color)
+    private async Task AddRecentColor(RecentColor color)
     {
-        var element = App.Instance.preferencesManager.GetOrDefault<JsonElement>("recentcolors", new JsonElement().BlankObject());
-
-
-        var subelement = new JsonObject();
-
-        subelement.Add("hexcolor", color.HexColor);
-        subelement.Add("timestampaddednanos", color.TimestampAddedNanos);
-        element = element.Set(color.HexColor.GetHashCode(), subelement);
-        App.Instance.preferencesManager.Set("recentcolors", element);
+        await App.Instance.preferencesManager.Write(async (x) =>
+        {
+            x.RecentColorSystem.RecentColors.Add(color);
+            return x;
+        });
     }
 
-    private void RemoveOldestRecentColor()
+    private Dictionary<string, RecentColor> recentColors() => App.Instance.preferencesManager.RecentColorSystem.RecentColors.ToDictionary(x => x.Color, x => x);
+
+
+
+    private async Task RemoveOldestRecentColor()
     {
-        var element = App.Instance.preferencesManager.GetOrDefault<JsonElement>("recentcolors", new JsonElement());
-        var key = element.EnumerateObject().OrderBy(x => Int64.Parse(x.Value.GetProperty("timestampaddednanos").GetString())).First().Name;
-        element = element.Remove(key);
-        App.Instance.preferencesManager.Set("recentcolors", element);
+        await App.Instance.preferencesManager.Write(async (x) =>
+        {
+            x.RecentColorSystem.RecentColors.Remove(x.RecentColorSystem.RecentColors.OrderBy(x => x.TimestampAdded).First());
+            return x;
+        });
     }
 
     
@@ -608,7 +649,7 @@
         Instance = this;
         client = hcf.CreateClient();
         client.Timeout = Timeout.InfiniteTimeSpan;
-        App.Instance.preferencesManager.AddChangeHandler(x =>
+        App.Instance.preferencesManager.AddWriteHandler(async x =>
         {
             Refresh();
             return x;
@@ -646,30 +687,30 @@
     </div>;
     }
 
-    private RenderFragment renderAvailableBackgroundsItem(RuntimeCustomBackground runtimeCustomBackground)
+    private RenderFragment renderAvailableBackgroundsItem(Wallpaper.CommonLanguage.RuntimeBackground runtimeCustomBackground)
     {
         var guid = Guid.NewGuid().ToString();
         return @<div class="hover:bg-white/[.08] active:bg-white/[.05] transition-all duration-150 ease-in-out cursor-pointer flex h-24 w-24 flex-col items-center justify-center rounded overflow-hidden  border-2 @(new Func<String>(() => {
            
-            var background = Home.backgrounds.FirstOrDefault(x => x.PersistentBackgroundID == Home.currentBackground,null);
+            var background = Home.backgrounds.FirstOrDefault(x => x.UniqueBackgroundID == Home.currentBackground ,null);
             if (background == null) {
                 return "border-transparent hover:border-white";
             }
-            var comparison = background.LoaderBackgroundID == runtimeCustomBackground.LoaderBackgroundID;
+            var comparison = background.BaseBackground.FixedBackgroundID == runtimeCustomBackground.BaseBackground.FixedBackgroundID;
             return comparison ? "border-white" : "border-transparent hover:border-white";
         }).Invoke())" @onclick="@(async () => {
-                            Home.Instance.SetBackground(runtimeCustomBackground.LoaderBackgroundID);
+                            await Home.Instance.SetBackground(runtimeCustomBackground.BaseBackground.FixedBackgroundID);
                     })">
                         @{
-                            switch (runtimeCustomBackground.BackgroundType)
+                            switch (runtimeCustomBackground.BaseBackground.BackgroundType)
                             {
                                 case "Image":
-                                    <img src="@(runtimeCustomBackground.BackgroundContent)" class="w-full h-full object-cover rounded" />
+            <img src="@(runtimeCustomBackground.BaseBackground.BackgroundContent)" class="w-full h-full object-cover rounded" />
                                     break;
                                 case "Video":
                                     <div class="h-full w-full">
-                                        <video style="object-fit: cover;" id="@guid" class="pointer-events-none h-full w-full rounded" src="@(runtimeCustomBackground.BackgroundContent)" type="video/webm">
-                    <!--<source src="@(runtimeCustomBackground.BackgroundContent)" type="video/webm" />-->
+                <video style="object-fit: cover;" id="@guid" class="pointer-events-none h-full w-full rounded" src="@(runtimeCustomBackground.BaseBackground.BackgroundContent)" type="video/webm">
+                    <!--<source src="@(runtimeCustomBackground.BaseBackground.BackgroundContent)" type="video/webm" />-->
                                         </video>
                                         <script id="@(guid + "_helper")">
                                             var video = document.getElementById(document.currentScript.id.replaceAll("_helper", ""))
@@ -693,43 +734,52 @@
     {
         var guid = Guid.NewGuid().ToString();
         return @<div class="hover:bg-white/[.08] active:bg-white/[.05] transition-all duration-150 ease-in-out cursor-pointer flex h-24 w-24 flex-col items-center justify-center rounded overflow-hidden border-2 @(new Func<String>(() => {
-            if (Home.Instance.IsSimpleBackground()) {
-                var processed =  Path.GetFileName(Home.Instance.GetCurrentBackground().Replace("\\","/"));
-                var comparison = bkg.Value.Filename == processed;
+            if (Home.Instance.IsSimpleBackground() && bkg.Value.BackgroundCase == RecentBackground.BackgroundOneofCase.SimpleBackgroundID) {
+                var queried = App.Instance.preferencesManager.SimpleBackgroundsSystem.SimpleBackgrounds.FirstOrDefault(x => x.BackgroundID == bkg.Value.SimpleBackgroundID);
+                if (queried == null) {
+                    return "border-transparent hover:border-white";
+                }
+                @* var processed =  Path.GetFileName(Home.Instance.GetCurrentBackground().Replace("\\","/"));
+                var hashed2 = HashCode(Path.GetFileNameWithoutExtension(queried.FilePath));
+                var hashed = HashCode(Path.GetFileName(queried.FilePath));
+                var hashed3 = HashCode(Path.GetFileNameWithoutExtension(processed));
+                var hashed4 = HashCode(queried.FilePath); *@
+                var comparison = queried.BackgroundID == Home.Instance.GetCurrentBackground();
                 return comparison ? "border-white" : "border-transparent hover:border-white";
             } else {
-                var comparison = bkg.Value.PersistentBackgroundID == Home.Instance.GetCurrentBackground();
+                var comparison = bkg.Value.InstancedBackgroundID == Home.Instance.GetCurrentBackground();
                 return comparison ? "border-white" : "border-transparent hover:border-white";
             }
         }).Invoke())" @onclick="@(async () => {
-                    if (bkg.Value.Filename.Length == 0) {
-                        Home.Instance.SetBackgroundFromPersistent(bkg.Value.PersistentBackgroundID);
+                    if (bkg.Value.BackgroundType == RecentBackground.Types.BackgroundType.Instanced) {
+                        await Home.Instance.SetBackgroundFromPersistent(bkg.Value.InstancedBackgroundID);
                     } else {
                         var req = App.Instance.controlPort;
                         var res = new UriBuilder(
                             new Uri("http://127.0.0.1:" + req + "/setbackgroundfromcache")
                         );
-
-                        res.Query = "filename=" + bkg.Value.Filename;
+                        var queried = App.Instance.preferencesManager.SimpleBackgroundsSystem.SimpleBackgrounds.FirstOrDefault(x => x.BackgroundID == bkg.Value.SimpleBackgroundID);
+                        
+                        res.Query = "backgroundid=" + queried.BackgroundID;
                         var result = await client.GetAsync(res.Uri);
                         Home.currentBackground = "";
                         App.SaveBackgroundData(Home.backgrounds);
                     }
             })">
-        @if(bkg.Value.Filename.Length == 0) {
+        @if(bkg.Value.BackgroundType == RecentBackground.Types.BackgroundType.Instanced) {
 
-            var background = Home.backgrounds.FirstOrDefault(x => x.PersistentBackgroundID == bkg.Value.PersistentBackgroundID);
+            var background = Home.backgrounds.FirstOrDefault(x => x.UniqueBackgroundID == bkg.Value.InstancedBackgroundID);
             if (background == null) {
                 <div>Background not found</div>
 
-            } else if (background.BackgroundType == "Image")
+    } else if (background.BaseBackground.BackgroundType == "Image")
             {
-                <img src="@(background.BackgroundContent)" class="w-full h-full object-cover rounded" />
+        <img src="@(background.BaseBackground.BackgroundContent)" class="w-full h-full object-cover rounded" />
             }
-            else if (background.BackgroundType == "Video")
+    else if (background.BaseBackground.BackgroundType == "Video")
             {
                 <div class="h-full w-full">
-                    <video style="object-fit: cover;" id="@guid" class="pointer-events-none h-full w-full rounded" src="@(background.BackgroundContent)" type="video/webm">
+                    <video style="object-fit: cover;" id="@guid" class="pointer-events-none h-full w-full rounded" src="@(background.BaseBackground.BackgroundContent)" type="video/webm">
                         
                     </video>
                     <script id="@(guid + "_helper")">
@@ -743,25 +793,30 @@
             }
 
     } else {
-        if (bkg.Value.Filename.EndsWith(".png"))
-        {
-            <img src="http://127.0.0.1:@(App.Instance.controlPort)/getpreviewfile?filename=@(bkg.Value.Filename)" class="w-full h-full object-cover rounded" />
-        }
-        else if (bkg.Value.Filename.EndsWith(".webm"))
-        {
-            <div class="h-full w-full">
-            <video style="object-fit: cover;" id="@guid" class="pointer-events-none h-full w-full rounded" src="http://127.0.0.1:@(App.Instance.controlPort)/getpreviewfile?filename=@(bkg.Value.Filename)" type="video/webm">
-                    
-                </video>
-                <script id="@(guid + "_helper")">
-                    var video = document.getElementById(document.currentScript.id.replaceAll("_helper", ""))
-                    video.muted = true;
-                    video.loop = true;
-                    video.play();
-                    console.log(video)
-                </script>
-            </div>
-        ;
+        var queried = App.Instance.preferencesManager.SimpleBackgroundsSystem.SimpleBackgrounds.FirstOrDefault(x => x.BackgroundID == bkg.Value.SimpleBackgroundID);
+
+        if (queried == null) {
+            <div>Background not found</div>
+        } else {
+            if (queried.FilePath.EndsWith(".png"))
+            {
+                <img src="http://127.0.0.1:@(App.Instance.controlPort)/getpreviewfile?filename=@(Path.GetFileName(queried.FilePath.Replace("\\","/")))" class="w-full h-full object-cover rounded" />
+            }
+            else if (queried.FilePath.EndsWith(".webm"))
+            {
+                <div class="h-full w-full">
+                    <video style="object-fit: cover;" id="@guid" class="pointer-events-none h-full w-full rounded" src="http://127.0.0.1:@(App.Instance.controlPort)/getpreviewfile?filename=@(Path.GetFileName(queried.FilePath.Replace("\\","/")))" type="video/webm">
+                    </video>
+                    <script id="@(guid + "_helper")">
+                        var video = document.getElementById(document.currentScript.id.replaceAll("_helper", ""))
+                        video.muted = true;
+                        video.loop = true;
+                        video.play();
+                        console.log(video)
+                    </script>
+                </div>
+            ;
+            }
         }
     }
     </div>
@@ -770,12 +825,24 @@
 
     public RenderFragment renderRecentColorItem(string colorid, RecentColor color)
     {
-        return@<div class="w-[24px] h-[24px] rounded-[100%] overflow-hidden border-2 radioinactive hover:radioactive hover:border-4 cursor-pointer flex flex-col items-center justify-center transition-all duration-150">
-        <div style="border-radius: 100%; overflow: hidden; background-color: @(color.HexColor); min-height: var(--subsize); min-width: var(--subsize);" class="transition-all ease-in-out duration-150">
+        return@<div class="w-[24px] h-[24px] rounded-[100%] overflow-hidden border-2 radioinactive hover:radioactive hover:border-4 cursor-pointer flex flex-col items-center justify-center transition-all duration-150" @onclick="async () => {
+            await Home.SetAccentColor(color.Color);
+        }">
+        <div style="border-radius: 100%; overflow: hidden; background-color: @(color.Color); min-height: var(--subsize); min-width: var(--subsize);" class="transition-all ease-in-out duration-150">
             </div>
         </div>;
     }
 
     private void OnDismiss()
     { }
+
+    public int HashCode(string s)
+    {
+        int h = 0;
+        foreach (char c in s)
+        {
+            h = 31 * h + c;
+        }
+        return h;
+    }
 }

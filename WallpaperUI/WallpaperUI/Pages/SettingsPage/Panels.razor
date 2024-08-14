@@ -60,7 +60,7 @@ else
         <div class="w-full flex flex-col bg-white/[.05] rounded p-4 mb-[4px]">
             <div class="font-normal">@item.Name (@item.ClientID)</div>
             <div class="h-4"></div>
-            @foreach (var item2 in Home.availablePanels.Where(x => x.ClientID == item.ClientID))
+            @foreach (var item2 in Home.availablePanels.Where(x => x.BasePanel.AppClientID == item.ClientID))
             {
                 @RenderAvailableAccordionItem(item2)
             }
@@ -222,9 +222,9 @@ else
         StateHasChanged();
     }
 
-    public void ToggleVisibillity(string loaderpanelid, bool newstate)
+    public async Task ToggleVisibillity(string fixedpanelid, bool newstate)
     {
-        var targetpanels = Home.panels.Where(x => x.LoaderPanelID == loaderpanelid).ToList();
+        var targetpanels = Home.panels.Where(x => x.BasePanel.FixedPanelID == fixedpanelid).ToList();
         if (targetpanels.Count > 0)
         {
             var panels = Home.PanelsToSkip.ToList();
@@ -232,29 +232,29 @@ else
             {
                 if (newstate)
                 {
-                    panels.Remove(item.PersistentPanelID);
+                    panels.Remove(item.UniquePanelID);
                 }
                 else
                 {
-                    panels.Add(item.PersistentPanelID);
+                    panels.Add(item.UniquePanelID);
                 }
             }
-            Home.PanelsToSkip = panels.Distinct().ToList();
+            await Home.SetPanelsToSkip(panels.Distinct().ToList());
             StateHasChanged();
         }
     }
 
-    public void ToggleVisibillity(string loaderpanelid)
+    public async Task ToggleVisibillity(string fixedpanelid)
     {
-        ToggleVisibillity(loaderpanelid, !DetermineVisibillity(loaderpanelid));
+        await ToggleVisibillity(fixedpanelid, !DetermineVisibillity(fixedpanelid));
     }
 
-    public bool DetermineVisibillity(string loaderpanelid)
+    public bool DetermineVisibillity(string fixedpanelid)
     {
         var hidden = true;
-        foreach (var item in Home.panels.Where(x => x.LoaderPanelID == loaderpanelid))
+        foreach (var item in Home.panels.Where(x => x.BasePanel.FixedPanelID == fixedpanelid))
         {
-            if (!Home.PanelsToSkip.Contains(item.PersistentPanelID))
+            if (!Home.PanelsToSkip.Contains(item.UniquePanelID))
             {
                 hidden = false;
             }
@@ -263,38 +263,38 @@ else
         return hidden;
     }
 
-    public class PanelComparer : IEqualityComparer<RuntimeCustomPanel>
+    public class PanelComparer : IEqualityComparer<Wallpaper.CommonLanguage.RuntimePanel>
     {
-        public bool Equals(RuntimeCustomPanel x, RuntimeCustomPanel y)
+        public bool Equals(Wallpaper.CommonLanguage.RuntimePanel x, Wallpaper.CommonLanguage.RuntimePanel y)
         {
             if (x == null || y == null)
                 return false;
-            return x.LoaderPanelID == y.LoaderPanelID;
+            return x.BasePanel.FixedPanelID == y.BasePanel.FixedPanelID;
         }
 
-        public int GetHashCode(RuntimeCustomPanel obj)
+        public int GetHashCode(Wallpaper.CommonLanguage.RuntimePanel obj)
         {
             if (obj == null)
                 return 0;
-            return obj.LoaderPanelID.GetHashCode();
+            return obj.BasePanel.FixedPanelID.GetHashCode();
         }
     }
 
-    public RenderFragment RenderAvailableAccordionItem(RuntimeCustomPanel item)
+    public RenderFragment RenderAvailableAccordionItem(Wallpaper.CommonLanguage.RuntimePanel item)
     {
         return@<div class="mb-[5px] bg-white/[.05] flex flex-row min-h-16 w-full cursor-pointer items-center justify-start transition duration-100 hover:bg-white/[.08] hover:shadow-[0_0px_0px_1px_rgba(255,255,255,0.1)] active:bg-white/[.03] rounded" @onclick="() => {
-                                Home.Instance.AddPanel(item.LoaderPanelID);
+                                Home.Instance.AddPanel(item.BasePanel.FixedPanelID);
         }">
             <div class="w-5"></div>
             <FluentIcon Value="@(new Icons.Regular.Size20.PuzzlePiece())" Color="@Color.Neutral" />
             <div class="w-5"></div>
         <div class="w-full min-h-full flex flex-row justify-center">
             <div class="w-full h-[32px] flex flex-row items-center justify-start">
-                @(item.PanelTitle + " (" + item.LoaderPanelID + ")")
+                @(item.BasePanel.PanelTitle + " (" + item.BasePanel.FixedPanelID + ")")
             </div>
             <div class="flex flex-row items-center justify-end pr-4" @onclick:stopPropagation="true" @onclick="() => {}">
                 <FluentButton Appearance="Appearance.Neutral" @onclick="() => {
-                                    Home.Instance.AddPanel(item.LoaderPanelID);
+                                    Home.Instance.AddPanel(item.BasePanel.FixedPanelID);
 
                                 }">
                     <FluentIcon Value="@(new Icons.Regular.Size16.AddCircle())" Slot="start" Color="Color.Success">
@@ -307,11 +307,11 @@ else
     </div>;
     }
 
-    public RenderFragment RenderAccordionItem2(RuntimeCustomPanel item)
+    public RenderFragment RenderAccordionItem2(Wallpaper.CommonLanguage.RuntimePanel item)
     {
-        bool accordionopen = activeWidgetsOpenAccordion == item.LoaderPanelID;
-        string itemid = item.LoaderPanelID;
-        int count = Home.panels.Where(x => x.LoaderPanelID == item.LoaderPanelID).Count();
+        bool accordionopen = activeWidgetsOpenAccordion == item.BasePanel.FixedPanelID;
+        string itemid = item.BasePanel.FixedPanelID;
+        int count = Home.panels.Where(x => x.BasePanel.FixedPanelID == item.BasePanel.FixedPanelID).Count();
         bool doesMultipleExist = count > 1;
 
 
@@ -339,35 +339,35 @@ else
             <div class="flex w-full flex-row">
                 <div class="flex h-full w-full flex-col items-center justify-start">
                     <div class="w-full font-normal">
-                        @(doesMultipleExist ? item.PanelTitle + " (" + item.LoaderPanelID + ") (" + count + ")" : item.PanelTitle + " (" + item.LoaderPanelID + ")")
+                        @(doesMultipleExist ? item.BasePanel.PanelTitle + " (" + item.BasePanel.FixedPanelID + ") (" + count + ")" : item.BasePanel.PanelTitle + " (" + item.BasePanel.FixedPanelID + ")")
                     </div>
                 </div>
                 <div class="flex flex-row items-center justify-end">
                     <div slot="end" class="h-full flex flex-row items-center justify-center">
                         <div @onclick:stopPropagation="true" @onclick="() => {}" class="h-full flex flex-row items-center justify-center">
-                            <FluentSwitch Value="@(doesMultipleExist ? !DetermineVisibillity(item.LoaderPanelID) : !Home.PanelsToSkip.Contains(item.PersistentPanelID))" ValueChanged="@(async (v) => {
+                            <FluentSwitch Value="@(doesMultipleExist ? !DetermineVisibillity(item.BasePanel.FixedPanelID) : !Home.PanelsToSkip.Contains(item.UniquePanelID))" ValueChanged="@(async (v) => {
                                     if (!doesMultipleExist)
                                     {
                                         var panels = Home.PanelsToSkip.ToList();
                                         if (v)
                                         {
-                                            panels.Remove(item.PersistentPanelID);
+                                            panels.Remove(item.UniquePanelID);
                                         }
                                         else
                                         {
-                                            panels.Add(item.PersistentPanelID);
+                                            panels.Add(item.UniquePanelID);
                                         }
-                                        Home.PanelsToSkip = panels;
+                                        await Home.SetPanelsToSkip(panels);
                                     }
                                     else
                                     {
-                                        ToggleVisibillity(item.LoaderPanelID, v);
+                                        await ToggleVisibillity(item.BasePanel.FixedPanelID, v);
                                     }
                                 })"></FluentSwitch>
                         </div>
                         <div class="w-4"></div>
                         <div>
-                            @(DetermineVisibillity(item.LoaderPanelID) ? "Hidden" : "Visible")
+                            @(DetermineVisibillity(item.BasePanel.FixedPanelID) ? "Hidden" : "Visible")
                         </div>
 
                     </div>
@@ -382,16 +382,16 @@ else
         </div>
         <div class="transition-[height] @(accordionopen ? "h-fit opacity-100" : "h-[0px] opacity-0") w-full overflow-hidden transition-all duration-150">
             <div class="bg-white/[.05] mt-[1px] flex min-h-16 w-full flex-col items-start p-4">
-                <div>Panel Title: @item.PanelTitle</div>
-                <div>Panel Type: @item.PanelType</div>
-                <div>Panel ID: @item.LoaderPanelID</div>
+                <div>Panel Title: @item.BasePanel.PanelTitle</div>
+                <div>Panel Type: @item.BasePanel.PanelType</div>
+                <div>Panel ID: @item.BasePanel.FixedPanelID</div>
                @* <div>Persistent Panel ID: @item.PersistentPanelID</div>*@
 
                 <div>Panel Control Port (websocket): @item.ControlPort</div>
 
                 <div class="h-7"></div>
 
-                <div>Added by: @item.ClientID</div>
+                <div>Added by: @item.BasePanel.AppClientID</div>
 
                 <div class="flex w-full flex-row justify-end"></div>
             </div>
@@ -400,28 +400,28 @@ else
             <div class="bg-white/[.05] mt-[1px] flex min-h-16 w-full flex-col items-center p-2">
                 @{
             var number = 1;
-                    @foreach (var key in Home.panels.Where(x => x.LoaderPanelID == item.LoaderPanelID))
+                    @foreach (var key in Home.panels.Where(x => x.BasePanel.FixedPanelID == item.BasePanel.FixedPanelID))
             {
 
-                    <div class="flex flex-row items-center bg-white/[.03] hover:bg-white/[.05] w-full p-4 rounded transition-all duration-150 ease-in-out hover:shadow-[0_0px_0px_1px_rgba(255,255,255,0.1)] active:bg-white/[.02] mb-[2px]" @onclick="@(() => {
-                            var v = Home.PanelsToSkip.Contains(key.PersistentPanelID);
+                    <div class="flex flex-row items-center bg-white/[.03] hover:bg-white/[.05] w-full p-4 rounded transition-all duration-150 ease-in-out hover:shadow-[0_0px_0px_1px_rgba(255,255,255,0.1)] active:bg-white/[.02] mb-[2px]" @onclick="@(async () => {
+                            var v = Home.PanelsToSkip.Contains(key.UniquePanelID);
                             var panels = Home.PanelsToSkip.ToList();
                             if (v)
                             {
-                                panels.Remove(key.PersistentPanelID);
+                                panels.Remove(key.UniquePanelID);
                             }
                             else
                             {
-                                panels.Add(key.PersistentPanelID);
+                                panels.Add(key.UniquePanelID);
                             }
-                            Home.PanelsToSkip = panels;
+                            await Home.SetPanelsToSkip(panels);
                         })">
 
                         <div class="w-full flex flex-row">
                             <FluentIcon Value="@(new Icons.Regular.Size16.Window())" Color="@Color.Neutral">
                             </FluentIcon>
                             <div class="w-4"></div>
-                            <div>@Home.panels.FirstOrDefault(x => x.PersistentPanelID == key.PersistentPanelID).PanelTitle @number</div>
+                            <div>@Home.panels.FirstOrDefault(x => x.UniquePanelID == key.UniquePanelID).BasePanel.PanelTitle @number</div>
                         </div>
                         <div class="flex flex-row items-center justify-end">
                             <div @onclick="(e) => {}" @onclick:stopPropagation="true" class="h-full flex flex-col justify-center items-center">
@@ -429,19 +429,19 @@ else
                                     var panels = Home.PanelsToSkip.ToList();
                                     if (v)
                                     {
-                                        panels.Remove(key.PersistentPanelID);
+                                        panels.Remove(key.UniquePanelID);
                                     }
                                     else
-                                    {panels.Add(key.PersistentPanelID);
+                                    {panels.Add(key.UniquePanelID);
 
                                     }
-                                    Home.PanelsToSkip = panels;
-                                })" Value="@(!Home.PanelsToSkip.Contains(key.PersistentPanelID))"></FluentSwitch>
+                                    await Home.SetPanelsToSkip(panels);
+                                })" Value="@(!Home.PanelsToSkip.Contains(key.UniquePanelID))"></FluentSwitch>
                             </div>
                             <div class="w-2"></div>
                             <div @onclick="() => {}" @onclick:stopPropagation="true">
                                 <FluentButton OnClick="@((e) => {
-                                        key.PersistentPanelData = Home.availableTemplatePanels.FirstOrDefault(x => x.LoaderPanelID == item.LoaderPanelID)!.PanelDefaultData;
+                                        key.PersistentData = Home.availableTemplatePanels.FirstOrDefault(x => x.FixedPanelID == item.BasePanel.FixedPanelID)!.DefaultData;
                                         Home.Instance.UpdatePanelData();
                                         App.SavePanelData(Home.panels);
                                     })">
@@ -471,10 +471,10 @@ else
             <div class="flex flex-row items-center h-max bg-black/[.35] p-2 rounded-b-lg mb-[4px]" style="overflow: overlay; width: calc(100%)">
                 <div style="min-width: max-content" class="flex flex-row w-full items-end justify-end">
                     <FluentButton Appearance="Appearance.Stealth" @onclick="() => {
-                                var panels = Home.panels.Where(x => x.LoaderPanelID == item.LoaderPanelID);
+                                var panels = Home.panels.Where(x => x.BasePanel.FixedPanelID == item.BasePanel.FixedPanelID);
                                 foreach (var panel in panels)
                                 {
-                                    panel.PersistentPanelData = Home.availableTemplatePanels.FirstOrDefault(x => x.LoaderPanelID == item.LoaderPanelID)!.PanelDefaultData;
+                                    panel.PersistentData = Home.availableTemplatePanels.FirstOrDefault(x => x.FixedPanelID == item.BasePanel.FixedPanelID)!.DefaultData;
                                 }
                                 Home.Instance.UpdatePanelData();
                                 App.SavePanelData(Home.panels);
@@ -485,13 +485,13 @@ else
                     </FluentButton>
                     <div class="w-4"></div>
                     <FluentButton Appearance="Appearance.Neutral" @onclick="() => {
-                                var panels = Home.panels.Where(x => x.LoaderPanelID == item.LoaderPanelID);
+                                var panels = Home.panels.Where(x => x.BasePanel.FixedPanelID == item.BasePanel.FixedPanelID);
                                 foreach (var panel in panels)
                                 {
-                                    panel.PersistentPanelX = panel.PanelRecommendedX;
-                                    panel.PersistentPanelY = panel.PanelRecommendedY;
-                                    panel.PersistentPanelWidth = panel.PanelRecommendedWidth;
-                                    panel.PersistentPanelHeight = panel.PanelRecommendedHeight;
+                                    panel.PanelX = panel.BasePanel.PanelRecommendedX;
+                                    panel.PanelY= panel.BasePanel.PanelRecommendedY;
+                                    panel.PanelWidth = panel.BasePanel.PanelRecommendedWidth;
+                                    panel.PanelHeight= panel.BasePanel.PanelRecommendedHeight;
                                 }
 
                                 Home.Instance.UpdatePanelData();
@@ -503,7 +503,7 @@ else
                     </FluentButton>
                     <div class="w-4"></div>
                     <FluentButton BackgroundColor="rgb(200,50,50)" @onclick="() => {
-                                var panels = Home.panels.Where(x => x.LoaderPanelID == item.LoaderPanelID);
+                                var panels = Home.panels.Where(x => x.BasePanel.FixedPanelID == item.BasePanel.FixedPanelID);
                                 foreach (var panel in panels.ToList())
                                 {
                                     Home.panels.Remove(panel);
@@ -524,54 +524,54 @@ else
     </div>;
     }
 
-    public RenderFragment RenderAccordionItem(RuntimeCustomPanel item)
+    public RenderFragment RenderAccordionItem(Wallpaper.CommonLanguage.RuntimePanel item)
     {
-        string itemid = item.PersistentPanelID;
-        int count = Home.panels.Where(x => x.LoaderPanelID == item.LoaderPanelID).Count();
+        string itemid = item.UniquePanelID;
+        int count = Home.panels.Where(x => x.BasePanel.FixedPanelID == item.BasePanel.FixedPanelID).Count();
         bool doesMultipleExist = count > 1;
 
 
         return@<FluentAccordionItem Heading="@(
-            doesMultipleExist ? item.PanelTitle + " (" + item.LoaderPanelID + ") (" + count + ")" : item.PanelTitle + " (" + item.LoaderPanelID + ")"
+            doesMultipleExist ? item.BasePanel.PanelTitle + " (" + item.BasePanel.FixedPanelID + ") (" + count + ")" : item.BasePanel.PanelTitle + " (" + item.BasePanel.FixedPanelID + ")"
                 )" Style="padding: 10px;">
         <FluentIcon Value="@(new Icons.Regular.Size24.Window())" Color="@Color.Neutral" Slot="start" />
         <div slot="end" class="h-full flex flex-row items-center justify-center">
-            <FluentSwitch Value="@(doesMultipleExist ? !DetermineVisibillity(item.LoaderPanelID) : !Home.PanelsToSkip.Contains(item.PersistentPanelID))" ValueChanged="@(async (v) => {
+            <FluentSwitch Value="@(doesMultipleExist ? !DetermineVisibillity(item.BasePanel.FixedPanelID) : !Home.PanelsToSkip.Contains(item.UniquePanelID))" ValueChanged="@(async (v) => {
                     if (!doesMultipleExist)
                     {
                         var panels = Home.PanelsToSkip.ToList();
                         if (v)
                         {
-                            panels.Remove(item.PersistentPanelID);
+                            panels.Remove(item.UniquePanelID);
                         }
                         else
                         {
-                            panels.Add(item.PersistentPanelID);
+                            panels.Add(item.UniquePanelID);
                         }
-                        Home.PanelsToSkip = panels;
+                        await Home.SetPanelsToSkip(panels);
                     }
                     else
                     {
-                        ToggleVisibillity(item.LoaderPanelID, v);
+                        await ToggleVisibillity(item.BasePanel.FixedPanelID, v);
                     }
                 })"></FluentSwitch>
             <div class="w-4"></div>
             <div>
-                @(DetermineVisibillity(item.LoaderPanelID) ? "Hidden" : "Visible")
+                @(DetermineVisibillity(item.BasePanel.FixedPanelID) ? "Hidden" : "Visible")
             </div>
 
         </div>
         <div class="bg-white/[.05] w-full h-max p-4 rounded">
-            <div>Panel Title: @item.PanelTitle</div>
-            <div>Panel Type: @item.PanelType</div>
-            <div>Panel ID: @item.LoaderPanelID</div>
-            <div>Persistent Panel ID: @item.PersistentPanelID</div>
+            <div>Panel Title: @item.BasePanel.PanelTitle</div>
+            <div>Panel Type: @item.BasePanel.PanelType</div>
+            <div>Panel ID: @item.BasePanel.FixedPanelID</div>
+            <div>Persistent Panel ID: @item.UniquePanelID</div>
 
             <div>Panel Control Port (websocket): @item.ControlPort</div>
 
             <div class="h-7"></div>
 
-            <div>Added by: @item.ClientID</div>
+            <div>Added by: @item.BasePanel.AppClientID</div>
         </div>
 
 
@@ -580,10 +580,10 @@ else
         <div class="bg-white/[.05] p-2 w-full rounded">
             @{
         var number = 1;
-                @foreach (var key in Home.panels.Where(x => x.LoaderPanelID == item.LoaderPanelID).Select(x => x.PersistentPanelID))
+                @foreach (var key in Home.panels.Where(x => x.BasePanel.FixedPanelID == item.BasePanel.FixedPanelID).Select(x => x.UniquePanelID))
         {
 
-                <div class="flex flex-row items-center bg-white/[.03] hover:bg-white/[.05] w-full p-4 rounded transition-all duration-150 ease-in-out hover:shadow-[0_0px_0px_1px_rgba(255,255,255,0.1)] active:bg-white/[.02] mb-[2px]" @onclick="@(() => {
+                <div class="flex flex-row items-center bg-white/[.03] hover:bg-white/[.05] w-full p-4 rounded transition-all duration-150 ease-in-out hover:shadow-[0_0px_0px_1px_rgba(255,255,255,0.1)] active:bg-white/[.02] mb-[2px]" @onclick="@(async () => {
                             var v = Home.PanelsToSkip.Contains(key);
                             var panels = Home.PanelsToSkip.ToList();
                             if (v)
@@ -594,14 +594,14 @@ else
                             {
                                 panels.Add(key);
                             }
-                            Home.PanelsToSkip = panels;
+                            await Home.SetPanelsToSkip(panels);
                         })">
 
                     <div class="w-full flex flex-row">
                         <FluentIcon Value="@(new Icons.Regular.Size16.Window())" Color="@Color.Neutral">
                         </FluentIcon>
                         <div class="w-4"></div>
-                        <div>@Home.panels.FirstOrDefault(x => x.PersistentPanelID == key).PanelTitle @number</div>
+                        <div>@Home.panels.FirstOrDefault(x => x.UniquePanelID == key).BasePanel.PanelTitle @number</div>
                     </div>
                     <div class="flex flex-row items-center justify-end">
                         <div @onclick="(e) => {}" @onclick:stopPropagation="true" class="h-full flex flex-col justify-center items-center">
@@ -615,13 +615,13 @@ else
                                     {panels.Add(key);
 
                                     }
-                                    Home.PanelsToSkip = panels;
+                                    await Home.SetPanelsToSkip(panels);
                                 })" Value="@(!Home.PanelsToSkip.Contains(key))"></FluentSwitch>
                         </div>
                         <div class="w-2"></div>
                         <div @onclick="() => {}" @onclick:stopPropagation="true">
                             <FluentButton OnClick="@((e) => {
-                                        item.PersistentPanelData = Home.availableTemplatePanels.FirstOrDefault(x => x.LoaderPanelID == item.LoaderPanelID)!.PanelDefaultData;
+                                        item.PersistentData = Home.availableTemplatePanels.FirstOrDefault(x => x.FixedPanelID == item.BasePanel.FixedPanelID)!.DefaultData;
                                         Home.Instance.UpdatePanelData();
                                         App.SavePanelData(Home.panels);
                                     })">
@@ -652,10 +652,10 @@ else
         <div class="flex flex-row items-center h-max bg-black/[.35] ml-[-8px] mb-[-8px] mr-[-8px] p-2 rounded-b-lg" style="padding-left: 16px; overflow: overlay; width: calc(100% + 16px)">
             <div style="min-width: max-content" class="flex flex-row w-full items-end justify-end">
                 <FluentButton Appearance="Appearance.Stealth" @onclick="() => {
-                                var panels = Home.panels.Where(x => x.LoaderPanelID == item.LoaderPanelID);
+                                var panels = Home.panels.Where(x => x.BasePanel.FixedPanelID == item.BasePanel.FixedPanelID);
                                 foreach (var panel in panels)
                                 {
-                                    panel.PersistentPanelData = Home.availableTemplatePanels.FirstOrDefault(x => x.LoaderPanelID == item.LoaderPanelID)!.PanelDefaultData;
+                                    panel.PersistentData = Home.availableTemplatePanels.FirstOrDefault(x => x.FixedPanelID == item.BasePanel.FixedPanelID)!.DefaultData;
                                 }
                                 Home.Instance.UpdatePanelData();
                                 App.SavePanelData(Home.panels);
@@ -666,13 +666,13 @@ else
                 </FluentButton>
                 <div class="w-4"></div>
                 <FluentButton Appearance="Appearance.Neutral" @onclick="() => {
-                                var panels = Home.panels.Where(x => x.LoaderPanelID == item.LoaderPanelID);
+                                var panels = Home.panels.Where(x => x.BasePanel.FixedPanelID == item.BasePanel.FixedPanelID);
                                 foreach (var panel in panels)
                                 {
-                                    panel.PersistentPanelX = panel.PanelRecommendedX;
-                                    panel.PersistentPanelY = panel.PanelRecommendedY;
-                                    panel.PersistentPanelWidth = panel.PanelRecommendedWidth;
-                                    panel.PersistentPanelHeight = panel.PanelRecommendedHeight;
+                                    panel.PanelX = panel.BasePanel.PanelRecommendedX;
+                                    panel.PanelY = panel.BasePanel.PanelRecommendedY;
+                                    panel.PanelWidth = panel.BasePanel.PanelRecommendedWidth;
+                                    panel.PanelHeight = panel.BasePanel.PanelRecommendedHeight;
                                 }
 
                                 Home.Instance.UpdatePanelData();
@@ -684,7 +684,7 @@ else
                 </FluentButton>
                 <div class="w-4"></div>
                 <FluentButton BackgroundColor="rgb(200,50,50)" @onclick="() => {
-                                var panels = Home.panels.Where(x => x.LoaderPanelID == item.LoaderPanelID);
+                                var panels = Home.panels.Where(x => x.BasePanel.FixedPanelID == item.BasePanel.FixedPanelID);
                                 foreach (var panel in panels.ToList())
                                 {
                                     Home.panels.Remove(panel);

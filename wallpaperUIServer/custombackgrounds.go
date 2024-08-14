@@ -9,104 +9,120 @@ import (
 	"os"
 	"path"
 	"wallpaperuiserver/protocol"
+
 	"github.com/elliotchance/pie/v2"
 	"github.com/gorilla/websocket"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
 )
 
-type TemplateCustomBackground struct {
+type TemplateCustomBackground2 struct {
 	LoaderBackgroundID    string
 	BackgroundType        string
 	BackgroundContent     string
 	BackgroundDefaultData string
 	ClientID              string
 }
-
-type RuntimeCustomBackground struct {
-	TemplateCustomBackground
+/*
+type protocol.RuntimeBackground struct {
+	protocol.BaseBackground
 	PersistentBackgroundID   string
 	PersistentBackgroundData string
 	Deleted                  bool
 	ControlPort              int
-}
+} */
 
-type ResultResponse2 struct {
-	AvailableBackgrounds []RuntimeCustomBackground
-	AvailableTemplateBackgrounds []TemplateCustomBackground
-	LastActiveBackgrounds []RuntimeCustomBackground
+/* type ResultResponse2 struct {
+	AvailableBackgrounds []protocol.RuntimeBackground
+	AvailableTemplateBackgrounds []protocol.BaseBackground
+	LastActiveBackgrounds []protocol.RuntimeBackground
 	LastActiveBackgroundID string
-	DeletedBackgrounds []RuntimeCustomBackground
+	DeletedBackgrounds []protocol.RuntimeBackground
 }
 
 type SaveRequest struct {
-	Backgrounds []RuntimeCustomBackground
+	Backgrounds []protocol.RuntimeBackground
 	LastActiveBackgroundID string
-}
+} */
 
 var backgroundchangehub = CreateMessageHub[BackgroundDataChangeRequest]()
 
-func LoadAllTemplateBackgrounds(filename string) ([]TemplateCustomBackground, error) {
+func LoadAllTemplateBackgrounds(filename string) ([]protocol.BaseBackground, error) {
 	backgroundsFile, err := os.ReadFile(filename)
 	if err != nil {
 		log.Println(err)
-		return []TemplateCustomBackground{}, err
+		return []protocol.BaseBackground{}, err
 	}
-	backgrounds := []TemplateCustomBackground{}
+	backgrounds := []TemplateCustomBackground2{}
 	err = json.Unmarshal(backgroundsFile, &backgrounds)
-	if err != nil {
-		log.Println(err)
-		return []TemplateCustomBackground{}, err
-	}
-	return backgrounds, nil
-}
-
-func LoadAllRuntimeBackgrounds(filename string) ([]RuntimeCustomBackground, error) {
-	backgroundsFile, err := os.ReadFile(filename)
-	if err != nil {
-		log.Println(err)
-		return []RuntimeCustomBackground{}, err
-	}
-	backgrounds := []RuntimeCustomBackground{}
-	err = json.Unmarshal(backgroundsFile, &backgrounds)
-	if err != nil {
-		log.Println(err)
-		return []RuntimeCustomBackground{}, err
-	}
-	return backgrounds, nil
-}
-
-func ConvertTemplateBackgroundsToRuntimeBackgrounds(backgrounds []TemplateCustomBackground) []RuntimeCustomBackground {
-	runtimeBackgrounds := []RuntimeCustomBackground{}
+	protoformat := []protocol.BaseBackground{}
 	for _, background := range backgrounds {
-		runtimeBackgrounds = append(runtimeBackgrounds, RuntimeCustomBackground{
-			TemplateCustomBackground: background,
-			PersistentBackgroundID:   GenerateGUID(),
-			PersistentBackgroundData: background.BackgroundDefaultData,
+		protoformat = append(protoformat, protocol.BaseBackground{
+			BackgroundType: 	  background.BackgroundType,
+			FixedBackgroundID:   background.LoaderBackgroundID,
+			BackgroundContent:   background.BackgroundContent,
+			BackgroundDefaultData: background.BackgroundDefaultData,
+			AppClientID: 		background.ClientID,
+		})
+	}
+	if err != nil {
+		log.Println(err)
+		return []protocol.BaseBackground{}, err
+	}
+	return protoformat, nil
+}
+
+func LoadAllRuntimeBackgrounds(filename string) ([]protocol.RuntimeBackground, error) {
+	backgroundsFile, err := os.ReadFile(filename)
+	if err != nil {
+		log.Println(err)
+		return []protocol.RuntimeBackground{}, err
+	}
+	result := protocol.PersistentRuntimeBackgrounds{}
+	err = protojson.Unmarshal(backgroundsFile, &result)
+	copied := pie.Map(result.Backgrounds, func(background *protocol.RuntimeBackground) protocol.RuntimeBackground {
+		return *proto.Clone(background).(*protocol.RuntimeBackground);
+	})
+	if err != nil {
+		log.Println(err)
+		return []protocol.RuntimeBackground{}, err
+	}
+	return copied, nil
+}
+
+func ConvertTemplateBackgroundsToRuntimeBackgrounds(backgrounds []protocol.BaseBackground) []protocol.RuntimeBackground {
+	runtimeBackgrounds := []protocol.RuntimeBackground{}
+	for _, background := range backgrounds {
+		runtimeBackgrounds = append(runtimeBackgrounds, protocol.RuntimeBackground{
+			BaseBackground: 		 proto.Clone(&background).(*protocol.BaseBackground),
+			UniqueBackgroundID:   GenerateGUID(),
+			PersistentData: background.BackgroundDefaultData,
 			Deleted:                  false,
 		})
 	}
 	return runtimeBackgrounds
 }
 
-func MeshBackgrounds(runtimeBackgrounds []RuntimeCustomBackground, templateBackgrounds []TemplateCustomBackground) []RuntimeCustomBackground {
-	result := append([]RuntimeCustomBackground{}, runtimeBackgrounds...)
+func MeshBackgrounds(runtimeBackgrounds []protocol.RuntimeBackground, templateBackgrounds []protocol.BaseBackground) []protocol.RuntimeBackground {
+	result := append([]protocol.RuntimeBackground{}, runtimeBackgrounds...)
 	for _, templateBackground := range templateBackgrounds {
-		index := pie.FindFirstUsing(runtimeBackgrounds, func(bg RuntimeCustomBackground) bool {
-			return bg.LoaderBackgroundID == templateBackground.LoaderBackgroundID
+		index := pie.FindFirstUsing(runtimeBackgrounds, func(bg protocol.RuntimeBackground) bool {
+			return bg.BaseBackground.FixedBackgroundID == templateBackground.FixedBackgroundID
 		})
 		if index == -1 {
 			continue
 		}
-		result[index] = RuntimeCustomBackground{
-			TemplateCustomBackground: templateBackground,
-			PersistentBackgroundID:   runtimeBackgrounds[index].PersistentBackgroundID,
-			PersistentBackgroundData: runtimeBackgrounds[index].PersistentBackgroundData,
+		result[index] = protocol.RuntimeBackground{
+			BaseBackground: proto.Clone(&templateBackground).(*protocol.BaseBackground),
+			UniqueBackgroundID:   runtimeBackgrounds[index].UniqueBackgroundID,
+			PersistentData:  runtimeBackgrounds[index].PersistentData,
 			Deleted:                  runtimeBackgrounds[index].Deleted,
 		}
 	}
 	for index, runtimePanel := range runtimeBackgrounds {
 		found := false
 		for _, templatepanel := range templateBackgrounds {
-			if runtimePanel.LoaderBackgroundID == templatepanel.LoaderBackgroundID {
+			if runtimePanel.BaseBackground.FixedBackgroundID == templatepanel.FixedBackgroundID {
 				break
 			}
 		}
@@ -117,36 +133,36 @@ func MeshBackgrounds(runtimeBackgrounds []RuntimeCustomBackground, templateBackg
 	return result
 }
 
-func UnstripBackgrounds(templateBackgrounds []TemplateCustomBackground, backgrounds []RuntimeCustomBackground) []RuntimeCustomBackground {
-	return pie.Map(backgrounds, func(background RuntimeCustomBackground) RuntimeCustomBackground {
-		switch background.BackgroundType {
+func UnstripBackgrounds(templateBackgrounds []protocol.BaseBackground, backgrounds []protocol.RuntimeBackground) []protocol.RuntimeBackground {
+	return pie.Map(backgrounds, func(background protocol.RuntimeBackground) protocol.RuntimeBackground {
+		switch background.BaseBackground.BackgroundType {
 		case "System":
-			fromtemplate := templateBackgrounds[pie.FindFirstUsing(templateBackgrounds, func(tp TemplateCustomBackground) bool { return tp.LoaderBackgroundID == background.LoaderBackgroundID })]
-			background.BackgroundContent = fromtemplate.BackgroundContent;
+			fromtemplate := templateBackgrounds[pie.FindFirstUsing(templateBackgrounds, func(tp protocol.BaseBackground) bool { return tp.FixedBackgroundID == background.BaseBackground.FixedBackgroundID })]
+			background.BaseBackground.BackgroundContent = fromtemplate.BackgroundContent;
 			return background
 		case "Embedded":
-			fromtemplate := templateBackgrounds[pie.FindFirstUsing(templateBackgrounds, func(tp TemplateCustomBackground) bool { return tp.LoaderBackgroundID == background.LoaderBackgroundID })]
-			background.BackgroundContent = fromtemplate.BackgroundContent;
+			fromtemplate := templateBackgrounds[pie.FindFirstUsing(templateBackgrounds, func(tp protocol.BaseBackground) bool { return tp.FixedBackgroundID == background.BaseBackground.FixedBackgroundID})]
+			background.BaseBackground.BackgroundContent = fromtemplate.BackgroundContent;
 			return background
 		case "Video", "Image", "Audio":
 			return background
 		default:
-			log.Println("Unknown background type: " + background.BackgroundType)
+			log.Println("Unknown background type: " + background.BaseBackground.BackgroundType)
 			return background
 		}
 	})
 }
 
-func PrepareBackgrounds(runtimeBackgrounds []RuntimeCustomBackground) []RuntimeCustomBackground {
-	return pie.Map(runtimeBackgrounds, func(bg RuntimeCustomBackground) RuntimeCustomBackground {
-		switch bg.BackgroundType {
+func PrepareBackgrounds(runtimeBackgrounds []protocol.RuntimeBackground) []protocol.RuntimeBackground {
+	return pie.Map(runtimeBackgrounds, func(bg protocol.RuntimeBackground) protocol.RuntimeBackground {
+		switch bg.BaseBackground.BackgroundType {
 		case "System":
-			data, err := os.ReadFile(path.Join(ADDONS_PATH, bg.ClientID, bg.BackgroundContent));
+			data, err := os.ReadFile(path.Join(ADDONS_PATH, bg.BaseBackground.AppClientID, bg.BaseBackground.BackgroundContent));
 			if err != nil {
 				log.Println(err)
-				bg.BackgroundContent = "Error loading panel content"
+				bg.BaseBackground.BackgroundContent = "Error loading background content"
 			}
-			bg.BackgroundContent = string(data)
+			bg.BaseBackground.BackgroundContent = string(data)
 			return bg;
 
 		case "Embedded":
@@ -158,12 +174,12 @@ func PrepareBackgrounds(runtimeBackgrounds []RuntimeCustomBackground) []RuntimeC
 			url.Path += "/background"
 			added := url.Query()
 
-			added.Add("content", bg.BackgroundContent)
-			added.Add("clientid", bg.ClientID)
-			added.Add("loaderbackgroundid", bg.LoaderBackgroundID)
-			added.Add("persistentbackgroundid", bg.PersistentBackgroundID)
+			added.Add("content", bg.BaseBackground.BackgroundContent)
+			added.Add("clientid", bg.BaseBackground.AppClientID)
+			added.Add("fixedbackgroundid", bg.BaseBackground.FixedBackgroundID)
+			added.Add("uniquebackgroundid", bg.UniqueBackgroundID)
 			url.RawQuery = added.Encode()
-			bg.BackgroundContent = fmt.Sprintf("%v", url)
+			bg.BaseBackground.BackgroundContent = fmt.Sprintf("%v", url)
 
 			return bg
 		default:
@@ -172,12 +188,12 @@ func PrepareBackgrounds(runtimeBackgrounds []RuntimeCustomBackground) []RuntimeC
 	})
 }
 
-func DeletedBackgrounds(runtimeBackgrounds []RuntimeCustomBackground, templateBackgrounds []TemplateCustomBackground) []RuntimeCustomBackground {
-	deleted := []RuntimeCustomBackground{}
+func DeletedBackgrounds(runtimeBackgrounds []protocol.RuntimeBackground, templateBackgrounds []protocol.BaseBackground) []protocol.RuntimeBackground {
+	deleted := []protocol.RuntimeBackground{}
 	for _, runtimePanel := range runtimeBackgrounds {
 		found := false
 		for _, templatepanel := range templateBackgrounds {
-			if runtimePanel.LoaderBackgroundID == templatepanel.LoaderBackgroundID {
+			if runtimePanel.BaseBackground.FixedBackgroundID == templatepanel.FixedBackgroundID {
 				found = true
 				break
 			}
@@ -216,7 +232,7 @@ func backgroundSystem(w http.ResponseWriter, r *http.Request) {
 		c.WriteMessage(websocket.TextMessage, []byte("ERAD: Error loading backgrounds"))
 		return
 	}
-	encoded, err := json.Marshal(result)
+	encoded, err := proto.Marshal(&result)
 	if err != nil {
 		log.Println("json:", err)
 		c.WriteMessage(websocket.TextMessage, []byte("ERAD: Error encoding response"))
@@ -224,7 +240,7 @@ func backgroundSystem(w http.ResponseWriter, r *http.Request) {
 	}
 	fmt.Println("Sending backgrounds")
 	//fmt.Println(string(encoded))
-	err = c.WriteMessage(websocket.TextMessage, encoded)
+	err = c.WriteMessage(websocket.BinaryMessage, encoded)
 	if err != nil {
 		log.Println("write:", err)
 		return
@@ -240,15 +256,17 @@ func backgroundSystem(w http.ResponseWriter, r *http.Request) {
 			if (change.ClientID == clientid) {
 				continue
 			}
-			marshalled, err := json.Marshal(BackgroundDataChangeRequest2{
-				NewBackgrounds: change.NewBackgrounds,
-				NewActiveBackground: change.NewActiveBackground,
+			cr := protocol.RuntimeBackgroundChangeRequest{}
+			cr.NewBackgrounds = pie.Map(change.NewBackgrounds, func(bg protocol.RuntimeBackground) *protocol.RuntimeBackground {
+				return &bg
 			})
+			cr.NewActiveBackgroundID = change.NewActiveBackground
+			marshalled, err := proto.Marshal(&cr)
 			if err != nil {
 				log.Println("json:", err)
 				return
 			}
-			c.WriteMessage(websocket.TextMessage, marshalled)
+			c.WriteMessage(websocket.BinaryMessage, marshalled)
 		}
 	}()
 	for {
@@ -264,17 +282,17 @@ func backgroundSystem(w http.ResponseWriter, r *http.Request) {
 
 			return
 		}
-		decoded := string(msg)
-		parsed := BackgroundDataChangeRequest2{}
-
-		err = json.Unmarshal([]byte(decoded), &parsed)
-
-		if (parsed.NewActiveBackground != "") {
-			addRecentMediaBackground(fmt.Sprint(hashCode(parsed.NewActiveBackground)), "", parsed.NewActiveBackground)
+		parsedLastActive := protocol.RuntimeBackgroundChangeRequest{}
+		proto.Unmarshal(msg, &parsedLastActive)
+		if (parsedLastActive.NewActiveBackgroundID != "") {
+			addRecentMediaBackground(parsedLastActive.NewActiveBackgroundID, "", parsedLastActive.NewActiveBackgroundID)
 		}
+
 		backgroundchangehub.SendMessage(BackgroundDataChangeRequest{
-			NewBackgrounds:  parsed.NewBackgrounds,
-			NewActiveBackground: parsed.NewActiveBackground,
+			NewBackgrounds:  pie.Map(parsedLastActive.NewBackgrounds, func(bg *protocol.RuntimeBackground) protocol.RuntimeBackground {
+				return *bg
+			}),
+			NewActiveBackground: parsedLastActive.NewActiveBackgroundID,
 			ClientID: clientid,
 			Stop: false,
 		})
@@ -283,14 +301,24 @@ func backgroundSystem(w http.ResponseWriter, r *http.Request) {
 			log.Println("json:", err)
 			return
 		}
-		parsed.NewBackgrounds = UnstripBackgrounds(result.AvailableTemplateBackgrounds, parsed.NewBackgrounds)
-		saved, err := json.Marshal(parsed.NewBackgrounds)
+
+		persistent := protocol.PersistentRuntimeBackgrounds{}
+		persistent.Backgrounds = pie.Map(UnstripBackgrounds(
+			pie.Map(result.TemplateBackgrounds, func(bg *protocol.BaseBackground) protocol.BaseBackground {
+				return *bg
+			}),
+			pie.Map(parsedLastActive.NewBackgrounds, func(bg *protocol.RuntimeBackground) protocol.RuntimeBackground {
+				return *bg
+			})), func(bg protocol.RuntimeBackground) *protocol.RuntimeBackground {
+			return &bg
+		})
+		saved, err := protojson.Marshal(&persistent)
 		if err != nil {
 			log.Println("json:", err)
 			return
 		}
 		err = os.WriteFile(file, saved, 0644)
-		os.WriteFile("lastactivebackground", []byte(parsed.NewActiveBackground), 0644)
+		os.WriteFile("lastactivebackground", []byte(parsedLastActive.NewActiveBackgroundID), 0644)
 		if err != nil {
 			log.Println("write:", err)
 			return
@@ -298,31 +326,31 @@ func backgroundSystem(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func LoadAllBackgroundsFromAddons() (ResultResponse2, error) {
+func LoadAllBackgroundsFromAddons() (protocol.BackgroundSystemInitialResponse, error) {
 	if _, err := os.Stat("addons"); err != nil {
 		os.Mkdir("addons", 0755)
 	}
 	addons, err := os.ReadDir(ADDONS_PATH)
 	if err != nil {
 		log.Println(err)
-		return ResultResponse2{}, fmt.Errorf("Error reading addons directory: %v", err)
+		return protocol.BackgroundSystemInitialResponse{}, fmt.Errorf("Error reading addons directory: %v", err)
 	}
-	availableBackgrounds := make([]TemplateCustomBackground, 0)
-	convertedAvailableBackgrounds := make([]RuntimeCustomBackground, 0)
+	availableBackgrounds := make([]protocol.BaseBackground, 0)
+	convertedAvailableBackgrounds := make([]protocol.RuntimeBackground, 0)
 	if _, err := os.Stat("storage/backgrounds.json"); err != nil {
 		file, err := os.Create("storage/backgrounds.json")
-		file.Write([]byte("[]"))
+		file.Write([]byte("{}"))
 		if err != nil {
 			log.Println(err)
-			return ResultResponse2{}, fmt.Errorf("Error creating backgrounds.json: %v", err)
+			return protocol.BackgroundSystemInitialResponse{}, fmt.Errorf("Error creating backgrounds.json: %v", err)
 		}
 		file.Close()
 	}
 	lastActiveBackgrounds, err := LoadAllRuntimeBackgrounds("storage/backgrounds.json")
-	preparedLastActiveBackgrounds := make([]RuntimeCustomBackground, 0)
+	preparedLastActiveBackgrounds := make([]protocol.RuntimeBackground, 0)
 	if err != nil {
 		log.Println(err)
-		return ResultResponse2{}, fmt.Errorf("Error loading last active backgrounds: %v", err)
+		return protocol.BackgroundSystemInitialResponse{}, fmt.Errorf("Error loading last active backgrounds: %v", err)
 	}
 	for i := 0; i < len(addons); i++ {
 		addon := addons[i]
@@ -350,13 +378,13 @@ func LoadAllBackgroundsFromAddons() (ResultResponse2, error) {
 				mediaBackgrounds, err := LoadAllMediaAsTemplateBackgrounds(ADDONS_PATH+"/"+addon.Name()+"/media/backgrounds", manifest)
 				if err != nil {
 					log.Println(err)
-					return ResultResponse2{}, fmt.Errorf("Error loading media backgrounds for addon %s: %v", addon.Name(), err)
+					return protocol.BackgroundSystemInitialResponse{}, fmt.Errorf("Error loading media backgrounds for addon %s: %v", addon.Name(), err)
 				}
 				declaredBackgrounds = append(declaredBackgrounds, mediaBackgrounds...)
 			}
 
-			declaredBackgrounds = pie.Map(declaredBackgrounds, func(bg TemplateCustomBackground) TemplateCustomBackground {
-				bg.ClientID = manifest.ClientID
+			declaredBackgrounds = pie.Map(declaredBackgrounds, func(bg protocol.BaseBackground) protocol.BaseBackground {
+				bg.AppClientID = manifest.ClientID
 				return bg
 			})
 			if err != nil {
@@ -369,11 +397,11 @@ func LoadAllBackgroundsFromAddons() (ResultResponse2, error) {
 			lastActiveBackgrounds = MeshBackgrounds(lastActiveBackgrounds, availableBackgrounds)
 			ra, err := manifest.GetRAOrBootstrapAddon(addon.Name())
 
-			backgroundsForAddon := pie.Filter(lastActiveBackgrounds, func(bg RuntimeCustomBackground) bool {
-				return bg.ClientID == manifest.ClientID
+			backgroundsForAddon := pie.Filter(lastActiveBackgrounds, func(bg protocol.RuntimeBackground) bool {
+				return bg.BaseBackground.AppClientID == manifest.ClientID
 			})
-			templateRuntimeBackgroundsForThisAddon := pie.Filter(converted, func(bg RuntimeCustomBackground) bool {
-				return bg.ClientID == manifest.ClientID
+			templateRuntimeBackgroundsForThisAddon := pie.Filter(converted, func(bg protocol.RuntimeBackground) bool {
+				return bg.BaseBackground.AppClientID == manifest.ClientID
 			})
 			if err != nil {
 				if err.Error() == "No bootstrap executable found for addon "+manifest.Name {
@@ -385,10 +413,10 @@ func LoadAllBackgroundsFromAddons() (ResultResponse2, error) {
 			} else {
 
 				for index, _ := range backgroundsForAddon {
-					backgroundsForAddon[index].ControlPort = ra.ControlPort
+					backgroundsForAddon[index].ControlPort = int32(ra.ControlPort)
 				}
 				for index, _ := range templateRuntimeBackgroundsForThisAddon {
-					templateRuntimeBackgroundsForThisAddon[index].ControlPort = ra.ControlPort
+					templateRuntimeBackgroundsForThisAddon[index].ControlPort = int32(ra.ControlPort)
 				}
 
 			}
@@ -400,17 +428,25 @@ func LoadAllBackgroundsFromAddons() (ResultResponse2, error) {
 	deletedBackgrounds := DeletedBackgrounds(lastActiveBackgrounds, availableBackgrounds)
 	for _, bg := range deletedBackgrounds {
 		for index, bg2 := range lastActiveBackgrounds {
-			if bg2.LoaderBackgroundID == bg.LoaderBackgroundID {
+			if bg2.BaseBackground.FixedBackgroundID == bg.BaseBackground.FixedBackgroundID {
 				lastActiveBackgrounds[index].Deleted = true
 			}
 		}
 	}
 	preparedLastActiveBackgrounds = PrepareBackgrounds(preparedLastActiveBackgrounds)
-	result := ResultResponse2{
-		AvailableBackgrounds:         PrepareBackgrounds(convertedAvailableBackgrounds),
-		AvailableTemplateBackgrounds: availableBackgrounds,
-		LastActiveBackgrounds:        preparedLastActiveBackgrounds,
-		DeletedBackgrounds:           deletedBackgrounds,
+	result := protocol.BackgroundSystemInitialResponse{
+		InstancedButBlankBackgrounds:  pie.Map(convertedAvailableBackgrounds, func(bg protocol.RuntimeBackground) *protocol.RuntimeBackground {
+			return &bg
+		}),
+		TemplateBackgrounds: 		 pie.Map(availableBackgrounds, func(bg protocol.BaseBackground) *protocol.BaseBackground {
+			return &bg
+		}),
+		InstancedBackgroundsFromStorage: pie.Map(preparedLastActiveBackgrounds, func(bg protocol.RuntimeBackground) *protocol.RuntimeBackground {
+			return &bg
+		}),
+		DeletedInstancedBackgrounds: pie.Map(deletedBackgrounds, func(bg protocol.RuntimeBackground) *protocol.RuntimeBackground {
+			return &bg
+		}),
 	}
 	return result, nil
 }

@@ -6,9 +6,9 @@
 
     protected override async Task OnInitializedAsync()
     {
-        App.Instance.preferencesManager.AddChangeHandler((x) =>
+        App.Instance.preferencesManager.AddWriteHandler(async (x) =>
         {
-            
+
             uniqueId = Guid.NewGuid().ToString();
             StateHasChanged();
             return x;
@@ -41,16 +41,17 @@
         {
             controlPort = App.Instance.controlPort;
         }
-        dynamic pref = App.Instance.preferencesManager.GetOrDefault2("simplebackground", false);
-        
-        if (pref is bool && !pref)
+
+        if (!App.Instance.preferencesManager.SimpleBackgroundsSystem.IsSimpleBackgroundEnabled)
         {
             return @<div></div>;
         }
         else
         {
-            var casted = ((JsonElement)pref).GetString();
-            var res = RenderInternals2(casted);
+            var pref = App.Instance.preferencesManager.SimpleBackgroundsSystem.ActiveSimpleBackgroundID;
+            var queried = App.Instance.preferencesManager.SimpleBackgroundsSystem.SimpleBackgrounds.FirstOrDefault(x => x.BackgroundID == pref);
+
+            var res = RenderInternals2(queried);
             return @res;
         } 
 
@@ -58,18 +59,18 @@
 
 
 
-    private RenderFragment RenderInternals2(string background)
+    private RenderFragment RenderInternals2(Wallpaper.CommonLanguage.SimpleBackground background)
     {
         //Console.WriteLine(runtimeCustomPanel.PanelType);
-        switch (NameToType(background))
+        switch (NameToType(background.FilePath))
         {
             case "Image":
-                return @<img src="@($"http://127.0.0.1:{controlPort}/simplebackground?id={uniqueId}")" class="pointer-events-none h-full w-full object-cover" />;
+                return @<img src="@($"http://127.0.0.1:{controlPort}/simplebackground?backgroundid={background.BackgroundID}")" class="pointer-events-none h-full w-full object-cover" />;
             case "Video":
                 return@<div class="h-full w-full">
                             <video style="
                                                 object-fit: cover;
-                                        " id="backgroundvideo" class="pointer-events-none h-full w-full" src="@($"http://127.0.0.1:{controlPort}/simplebackground?id={uniqueId}")" type="video/webm">
+                                                " id="backgroundvideo" class="pointer-events-none h-full w-full" src="@($"http://127.0.0.1:{controlPort}/simplebackground?backgroundid={background.BackgroundID}")" type="video/webm">
 
                             </video>
                             <script>

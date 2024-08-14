@@ -2,7 +2,7 @@
 
 @code {
     [Parameter]
-    public RuntimeCustomBackground runtimeCustomBackground { get; set; }
+    public Wallpaper.CommonLanguage.RuntimeBackground runtimeCustomBackground { get; set; }
 
     [Parameter]
     public Action saveAction { get; set; }
@@ -25,20 +25,20 @@
     private RenderFragment RenderInternals2()
     {
         //Console.WriteLine(runtimeCustomPanel.PanelType);
-        switch (runtimeCustomBackground.BackgroundType)
+        switch (runtimeCustomBackground.BaseBackground.BackgroundType)
         {
             case "System":
                 var guid = Guid.NewGuid().ToString();
-                return @<div>@(new MarkupString(runtimeCustomBackground.BackgroundContent))</div>;
+                return @<div>@(new MarkupString(runtimeCustomBackground.BaseBackground.BackgroundContent))</div>;
             case "Embedded":
-                return@<iframe sandbox="allow-storage-access-by-user-activation allow-presentation allow-pointer-lock allow-modals allow-scripts allow-forms" class="h-full w-full" src="@runtimeCustomBackground.BackgroundContent"></iframe>;
+                return@<iframe sandbox="allow-storage-access-by-user-activation allow-presentation allow-pointer-lock allow-modals allow-scripts allow-forms" class="h-full w-full" src="@runtimeCustomBackground.BaseBackground.BackgroundContent"></iframe>;
             case "Image":
-                return @<img src="@runtimeCustomBackground.BackgroundContent" class="pointer-events-none h-full w-full object-cover" />;
+                return @<img src="@runtimeCustomBackground.BaseBackground.BackgroundContent" class="pointer-events-none h-full w-full object-cover" />;
             case "Video":
                 return@<div class="h-full w-full">
                     <video style="
                         object-fit: cover;
-                " id="backgroundvideo" class="pointer-events-none h-full w-full" src="@runtimeCustomBackground.BackgroundContent" type="video/mp4">
+                    " id="backgroundvideo" class="pointer-events-none h-full w-full" src="@runtimeCustomBackground.BaseBackground.BackgroundContent" type="video/mp4">
             
         </video>
                     <script>
@@ -50,7 +50,7 @@
                     </script>
                 </div>;
             case "Audio":
-                return @<audio autoplay loop class="h-full w-full"><source src="@runtimeCustomBackground.BackgroundContent" type="audio/mpeg" /></audio>;
+                return @<audio autoplay loop class="h-full w-full"><source src="@runtimeCustomBackground.BaseBackground.BackgroundContent" type="audio/mpeg" /></audio>;
             default:
                 return @<div>Unknown</div>;
         }

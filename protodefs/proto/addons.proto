@@ -3,26 +3,26 @@ option go_package = "wallpaperuiserver/protocol";
 option csharp_namespace = "Wallpaper.CommonLanguage";
 
 message AddonManifest {
-    string AddonName = 1;
-    string AddonDescription = 2;
-    string AddonVersion = 3;
-    string AddonAuthor = 4;
-    string AddonWebsite = 5;
-    string AddonIcon = 6;
-    string AddonClientID = 7;
-    string AddonBootstrapEntryPoint = 8;
-    bool AddonEnableAutoRestart = 9;
-    string AddonFolderName = 10;
+     string AddonName = 1 ;
+     string AddonDescription = 2 ;
+     string AddonVersion = 3 ;
+     string AddonAuthor = 4 ;
+     string AddonWebsite = 5 ;
+     string AddonIcon = 6 ;
+     string AddonClientID = 7 ;
+     string AddonBootstrapEntryPoint = 8 ;
+     bool AddonEnableAutoRestart = 9 ;
+     string AddonFolderName = 10 ;
 }
 
 message AddonOrigin {
-    string AddonName = 1;
-    string AddonClientID = 2;
-    string AddonFolderName = 3;
+     string AddonName = 1 ;
+     string AddonClientID = 2 ;
+     string AddonFolderName = 3 ;
 }
 
 message InstallAddonRequest {
-    string InstallType = 1;
+     string InstallType = 1 ;
 }
 
 message AddonChange {
@@ -30,8 +30,8 @@ message AddonChange {
         ADD = 0;
         REMOVE = 1;
     }
-    ChangeType changeType = 1;
-    AddonManifest addonManifest = 2;
+     ChangeType changeType = 1 ;
+     AddonManifest addonManifest = 2;
 }
 
 message ApplyAddonChanges {

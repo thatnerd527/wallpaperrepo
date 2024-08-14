@@ -101,7 +101,7 @@
     ">
                         @foreach (var panel in availablePanels)
                         {
-                            <FluentOption Value="@panel.LoaderPanelID">"@panel.LoaderPanelID" Created By: @panel.ClientID</FluentOption>
+                            <FluentOption Value="@panel.BasePanel.FixedPanelID">"@panel.BasePanel.FixedPanelID" Created By: @panel.BasePanel.AppClientID</FluentOption>
                             <div class="h-2"></div>
                         }
 
@@ -110,7 +110,7 @@
                     </div>
                     <FluentButton IconStart="@(new Icons.Regular.Size16.Add())" Style="
                     min-height: 32px;
-                    " Disabled="!availablePanels.Select(x => x.LoaderPanelID).Contains(listboxValue)" @onclick="() => {
+                    " Disabled="!availablePanels.Select(x => x.BasePanel.FixedPanelID).Contains(listboxValue)" @onclick="() => {
                         AddPanel(listboxValue);
                 }">
                         Add
@@ -128,11 +128,11 @@ left: 0px;
         ">
             
             @{
-                var filtered = panels.Where(x => !PanelsToSkip.Contains(x.LoaderPanelID));
+                var filtered = panels.Where(x => !PanelsToSkip.Contains(x.BasePanel.FixedPanelID));
                 @foreach (var panel in filtered)
                 {
 
-                    @RenderPanel(panel.PersistentPanelID)
+                    @RenderPanel(panel.UniquePanelID)
                 }
             }
         </div>
@@ -172,21 +172,22 @@ else if (mode == "settings")
 }
 @using System.Text.Json;
 @using System.Text.Json.Nodes;
+@using Wallpaper.CommonLanguage;
 @code {
     string? listboxValue = "";
-    public static List<RuntimeCustomPanel> availablePanels = new List<RuntimeCustomPanel>();
-    public static List<TemplateCustomPanel> availableTemplatePanels = new List<TemplateCustomPanel>();
-    public static List<RuntimeCustomPanel> panels = new List<RuntimeCustomPanel>();
-    public static List<RuntimeCustomPanel> deletedPanels = new List<RuntimeCustomPanel>();
+    public static List<Wallpaper.CommonLanguage.RuntimePanel> availablePanels = new();
+    public static List<Wallpaper.CommonLanguage.BasePanel> availableTemplatePanels = new();
+    public static List<Wallpaper.CommonLanguage.RuntimePanel> panels = new();
+    public static List<Wallpaper.CommonLanguage.RuntimePanel> deletedPanels = new();
     public static List<PanelHeader> panelHeaders = new List<PanelHeader>();
 
-    public static List<RuntimeCustomBackground> availableBackgrounds = new();
-    public static List<TemplateCustomBackground> availableTemplateBackgrounds = new();
-    public static List<RuntimeCustomBackground> backgrounds = new();
-    public static List<RuntimeCustomBackground> deletedBackground = new();
+    public static List<Wallpaper.CommonLanguage.RuntimeBackground> availableBackgrounds = new();
+    public static List<Wallpaper.CommonLanguage.BaseBackground> availableTemplateBackgrounds = new();
+    public static List<Wallpaper.CommonLanguage.RuntimeBackground> backgrounds = new();
+    public static List<Wallpaper.CommonLanguage.RuntimeBackground> deletedBackground = new();
 
-    public static List<AddonManifest> addonManifests = new();
-    public static List<AddonManifest> disabledAddons = new();
+    public static List<WallpaperUI.Cs.AddonManifest> addonManifests = new();
+    public static List<WallpaperUI.Cs.AddonManifest> disabledAddons = new();
 
     public static string currentBackground = null;
     public static bool connectionStatus = true;
@@ -201,7 +202,7 @@ else if (mode == "settings")
     {
 
         Instance = this;
-        App.Instance.preferencesManager.AddChangeHandler((x) =>
+        App.Instance.preferencesManager.AddWriteHandler(async (x) =>
         {
             StateHasChanged();
             return x;
@@ -214,31 +215,28 @@ else if (mode == "settings")
 
     public static string AccentColor
     {
-        get => App.Instance.preferencesManager.GetOrDefault("accentcolor", "#0078D4");
-        set => App.Instance.preferencesManager.Set("accentcolor", value);
+        get => App.Instance.preferencesManager.Value.AccentColor;
+
+    }
+
+    public static async Task SetAccentColor(string color)
+    {
+        await App.Instance.preferencesManager.Write(async (x) => { x.AccentColor = color; return x; });
     }
 
     public static List<string> PanelsToSkip
     {
-        get {
-            var temp = App.Instance.preferencesManager.GetOrDefault("panelstoskip", new JsonElement());
-            if (temp.ValueKind == JsonValueKind.Undefined)
+        get => App.Instance.preferencesManager.PanelsToSkip.Select(x => x.UniquePanelID).ToList();
+    }
+
+    public static async Task SetPanelsToSkip(List<string> panels2)
+    {
+        await App.Instance.preferencesManager.Write(async (x) =>
             {
-                return new List<string>();
-            }
-            return temp.EnumerateArray().Select(x => x.GetString()).ToList();
-        }
-        set
-        {
-            var temp = new JsonArray();
-            foreach (var item in value)
-            {
-                temp.Add(item);
-            }
-            var serialized = JsonSerializer.Serialize(temp);
-            var deserialized = JsonSerializer.Deserialize<JsonElement>(serialized);
-            App.Instance.preferencesManager.Set("panelstoskip", deserialized);
-        }
+                x.PanelsToSkip.Clear();
+                x.PanelsToSkip.AddRange(panels2.Select(x => panels.FirstOrDefault(y => y.UniquePanelID == x)));
+                return x;
+            });
     }
 
     private async void ReloadUI()
@@ -253,11 +251,15 @@ else if (mode == "settings")
 
     private RenderFragment RenderBackgroundInternals()
     {
-        dynamic data = App.Instance.preferencesManager.GetOrDefault2("simplebackground", false);
-        if (data is bool && !data)
+        SimpleBackgroundsSystem data = App.Instance.preferencesManager.SimpleBackgroundsSystem;
+        if (data == null)
         {
-            return@<Background runtimeCustomBackground="@backgrounds.FirstOrDefault(x => x.PersistentBackgroundID == currentBackground)" saveAction="() => {
-                            App.SavePanelData(panels);
+            data = new SimpleBackgroundsSystem();
+        }
+        if (!data.IsSimpleBackgroundEnabled)
+        {
+            return@<Background runtimeCustomBackground="@backgrounds.FirstOrDefault(x => x.UniqueBackgroundID == currentBackground)" saveAction="() => {
+                            App.SaveBackgroundData(backgrounds);
                         }" />;
         }
         else
@@ -268,43 +270,29 @@ else if (mode == "settings")
 
     public string GetCurrentBackground()
     {
-        dynamic data = App.Instance.preferencesManager.GetOrDefault2("simplebackground", false);
-        if (data is bool && !data)
+        SimpleBackgroundsSystem data = App.Instance.preferencesManager.SimpleBackgroundsSystem;
+        if (data == null)
         {
-            return currentBackground;
+            data = new SimpleBackgroundsSystem();
+        }
+        if (data.IsSimpleBackgroundEnabled)
+        {
+            return data.ActiveSimpleBackgroundID;
         }
         else
         {
-            try
-            {
-                return data.GetString();
-            }
-            catch (Exception e)
-            {
-                try
-                {
-                    return data.GetBoolean() ? "simple" : currentBackground;
-                }
-                catch (Exception e2)
-                {
-                    return (string)data;
-                }
-            }
-
+            return currentBackground;
         }
     }
 
     public bool IsSimpleBackground()
     {
-        dynamic data = App.Instance.preferencesManager.GetOrDefault2("simplebackground", false);
-        if (data is bool && !data)
+        SimpleBackgroundsSystem data = App.Instance.preferencesManager.SimpleBackgroundsSystem;
+        if (data == null)
         {
-            return false;
+            data = new SimpleBackgroundsSystem();
         }
-        else
-        {
-            return true;
-        }
+        return data.IsSimpleBackgroundEnabled;
     }
 
     [JSInvokable]
@@ -335,7 +323,7 @@ else if (mode == "settings")
 
     public RenderFragment RenderPanel(string persistentPanelID)
     {
-        var panel = panels.FirstOrDefault(x => x.PersistentPanelID == persistentPanelID);
+        var panel = panels.FirstOrDefault(x => x.UniquePanelID == persistentPanelID);
         return @<Panel runtimeCustomPanel="@panel" saveAction="() => {
             App.SavePanelData(panels);
         }" closeAction="() => {
@@ -346,7 +334,7 @@ else if (mode == "settings")
     ;
     }
 
-    public static void SetData(List<RuntimeCustomPanel> availablePanels2, List<TemplateCustomPanel> availableTemplatePanels2, List<RuntimeCustomPanel> panels2, List<RuntimeCustomPanel> deletedPanels2)
+    public static void SetData(List<Wallpaper.CommonLanguage.RuntimePanel> availablePanels2, List<Wallpaper.CommonLanguage.BasePanel> availableTemplatePanels2, List<Wallpaper.CommonLanguage.RuntimePanel> panels2, List<Wallpaper.CommonLanguage.RuntimePanel> deletedPanels2)
     {
         availablePanels = availablePanels2;
         availableTemplatePanels = availableTemplatePanels2;
@@ -359,7 +347,7 @@ else if (mode == "settings")
         Instance.StateHasChanged();
     }
 
-    public static void SetBackgroundData(List<RuntimeCustomBackground> availableBackgrounds2, List<TemplateCustomBackground> availableTemplateBackgrounds2, List<RuntimeCustomBackground> backgrounds2, List<RuntimeCustomBackground> deletedBackground2, string currentBackground2)
+    public static void SetBackgroundData(List<Wallpaper.CommonLanguage.RuntimeBackground> availableBackgrounds2, List<Wallpaper.CommonLanguage.BaseBackground> availableTemplateBackgrounds2, List<Wallpaper.CommonLanguage.RuntimeBackground> backgrounds2, List<Wallpaper.CommonLanguage.RuntimeBackground> deletedBackground2, string currentBackground2)
     {
         availableBackgrounds = availableBackgrounds2;
         availableTemplateBackgrounds = availableTemplateBackgrounds2;
@@ -371,37 +359,45 @@ else if (mode == "settings")
         Instance.StateHasChanged();
     }
 
-    public void SetBackground(string backgroundID)
+    public async Task SetBackground(string backgroundID)
     {
-        App.Instance.preferencesManager.Remove("simplebackground");
-        if (backgrounds.Any(x => x.LoaderBackgroundID == backgroundID))
+        await App.Instance.preferencesManager.Write(async (x) =>
         {
-            currentBackground = backgrounds.FirstOrDefault(x => x.LoaderBackgroundID == backgroundID).PersistentBackgroundID;
+            x.SimpleBackgroundsSystem.IsSimpleBackgroundEnabled = false;
+            return x;
+        });
+        if (backgrounds.Any(x => x.BaseBackground.FixedBackgroundID == backgroundID))
+        {
+            currentBackground = backgrounds.FirstOrDefault(x => x.BaseBackground.FixedBackgroundID == backgroundID).UniqueBackgroundID;
         }
         else
         {
-            var background = availableBackgrounds.FirstOrDefault(x => x.LoaderBackgroundID == backgroundID).Cloned();
+            var background = availableBackgrounds.FirstOrDefault(x => x.BaseBackground.FixedBackgroundID == backgroundID).Clone();
             backgrounds.Add(background);
-            currentBackground = background.PersistentBackgroundID;
+            currentBackground = background.UniqueBackgroundID;
 
         }
         App.SaveBackgroundData(backgrounds);
         StateHasChanged();
     }
 
-    public void SetBackgroundFromPersistent(string backgroundID)
+    public async Task SetBackgroundFromPersistent(string backgroundID)
     {
-        App.Instance.preferencesManager.Remove("simplebackground");
+        await App.Instance.preferencesManager.Write(async (x) =>
+        {
+            x.SimpleBackgroundsSystem.IsSimpleBackgroundEnabled = false;
+            return x;
+        });
         currentBackground = backgroundID;
         App.SaveBackgroundData(backgrounds);
         StateHasChanged();
     }
 
-    public RuntimeCustomPanel AddPanel(String panelID)
+    public Wallpaper.CommonLanguage.RuntimePanel AddPanel(String panelID)
     {
-        var cloned = availablePanels.FirstOrDefault(x => x.LoaderPanelID == panelID)!.Cloned();
+        var cloned = availablePanels.FirstOrDefault(x => x.BasePanel.FixedPanelID == panelID)!.Clone();
 
-        cloned.PersistentPanelID = Guid.NewGuid().ToString();
+        cloned.UniquePanelID = Guid.NewGuid().ToString();
 
         panels.Add(cloned);
         App.SavePanelData(panels);

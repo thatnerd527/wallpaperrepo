@@ -11,6 +11,8 @@ require (
 	github.com/orcaman/concurrent-map/v2 v2.0.1
 )
 
+require github.com/golang/protobuf v1.5.4 // indirect
+
 require (
 	github.com/TheTitanrain/w32 v0.0.0-20180517000239-4f5cfb03fabf // indirect
 	github.com/getlantern/context v0.0.0-20190109183933-c447772a6520 // indirect

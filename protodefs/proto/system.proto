@@ -7,7 +7,7 @@ message RestartIPCMessage {
     enum MessageType {
         RESTART = 0;
     }
-    MessageType type = 1;
+     MessageType type = 1 ;
 }
 
 message AutoStart {
@@ -15,7 +15,7 @@ message AutoStart {
         DISABLE = 0;
         ENABLE = 1;
     }
-    MessageType type = 1;
+     MessageType type = 1   ;
 }
 
 message AutoStartResponse {
@@ -23,6 +23,6 @@ message AutoStartResponse {
         DISABLE = 0;
         ENABLE = 1;
     }
-    MessageType type = 1;
-    bool success = 2;
+     MessageType type = 1  ;
+     bool success = 2 ;
 }

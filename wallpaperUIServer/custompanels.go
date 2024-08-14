@@ -1,21 +1,23 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"net/url"
 	"os"
 	"path"
+	"wallpaperuiserver/protocol"
 
 	"github.com/elliotchance/pie/v2"
 	"github.com/gorilla/websocket"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
 )
 
 var ADDONS_PATH = "addons"
 var RuntimeAddons = []*RuntimeAddon{}
-
+/*
 type ResultResponse struct {
 	AvailablePanels         []RuntimeCustomPanel
 	AvailableTemplatePanels []TemplateCustomPanel
@@ -23,7 +25,7 @@ type ResultResponse struct {
 	DeletedPanels           []RuntimeCustomPanel
 }
 
-type RuntimeCustomPanel struct {
+ type RuntimeCustomPanel struct {
 	PanelType string
 
 	// Unique per-panel on file
@@ -51,9 +53,9 @@ type RuntimeCustomPanel struct {
 
 	PanelIcon string
 	ClientID  string
-}
+} */
 
-type TemplateCustomPanel struct {
+type TemplateCustomPanel2 struct {
 	PanelType string
 
 	// Unique per-panel on file
@@ -93,7 +95,7 @@ type RuntimeAddon struct {
 }
 
 type PanelDataChangeRequest struct {
-	NewData []RuntimeCustomPanel
+	NewData []protocol.RuntimePanel
 	ClientID string
 	Stop bool
 }
@@ -101,14 +103,14 @@ type PanelDataChangeRequest struct {
 
 
 type BackgroundDataChangeRequest struct {
-	NewBackgrounds []RuntimeCustomBackground
+	NewBackgrounds []protocol.RuntimeBackground
 	NewActiveBackground string
 	ClientID string
 	Stop bool
 }
 
 type BackgroundDataChangeRequest2 struct {
-	NewBackgrounds []RuntimeCustomBackground
+	NewBackgrounds []protocol.RuntimeBackground
 	NewActiveBackground string
 }
 
@@ -172,27 +174,23 @@ func (am *AddonManifest) IsBootstrapExecutable() bool {
 	return am.BootstapExecutable != ""
 }
 
-func CreateTemplateCustomPanel(panelType string, loaderPanelID string, panelTitle string, panelContent string, panelRecommendedWidth int, panelRecommendedHeight int, panelMinWidth int, panelMinHeight int, panelMaxWidth int, panelMaxHeight int, panelRecommendedX int, panelRecommendedY int, panelIcon string, clientID string, defaultData string) TemplateCustomPanel {
-	return TemplateCustomPanel{PanelType: panelType, LoaderPanelID: loaderPanelID, PanelTitle: panelTitle, PanelContent: panelContent, PanelRecommendedWidth: panelRecommendedWidth, PanelRecommendedHeight: panelRecommendedHeight, PanelMinWidth: panelMinWidth, PanelMinHeight: panelMinHeight, PanelMaxWidth: panelMaxWidth, PanelMaxHeight: panelMaxHeight, PanelRecommendedX: panelRecommendedX, PanelRecommendedY: panelRecommendedY, PanelIcon: panelIcon, ClientID: clientID, PanelDefaultData: defaultData}
-}
-
 type CustomUpgrader struct {
 	websocket.Upgrader
 }
 
-func PreparePanels(panels []RuntimeCustomPanel) []RuntimeCustomPanel {
-	return pie.Map(panels, func(panel RuntimeCustomPanel) RuntimeCustomPanel {
-		switch panel.PanelType {
+func PreparePanels(panels []protocol.RuntimePanel) []protocol.RuntimePanel {
+	return pie.Map(panels, func(panel protocol.RuntimePanel) protocol.RuntimePanel {
+		switch panel.BasePanel.PanelType {
 		case "System":
-			data, err := os.ReadFile(path.Join(ADDONS_PATH, panel.ClientID, panel.PanelContent));
+			data, err := os.ReadFile(path.Join(ADDONS_PATH, panel.BasePanel.AppClientID, panel.BasePanel.PanelContent));
 			//fmt.Println(string(data));
 			if err != nil {
 				log.Println(err)
 				//fmt.Println("Error loading panel content")
-				panel.PanelContent = fmt.Sprintf("Error loading panel content troubleshooting info: %v., Addon Client ID: %v, Panel File Name: %v", err, panel.ClientID,panel.PanelContent)
+				panel.BasePanel.PanelContent = fmt.Sprintf("Error loading panel content troubleshooting info: %v., Addon Client ID: %v, Panel File Name: %v", err, panel.BasePanel.AppClientID,panel.BasePanel.PanelContent)
 				return panel
 			}
-			panel.PanelContent = string(data)
+			panel.BasePanel.PanelContent = string(data)
 			return panel
 		case "Embedded":
 			url, err := url.Parse(fmt.Sprintf("http://127.0.0.1:%d", panel.ControlPort))
@@ -201,37 +199,37 @@ func PreparePanels(panels []RuntimeCustomPanel) []RuntimeCustomPanel {
 				return panel
 			}
 			added := url.Query()
-			added.Add("content", panel.PanelContent)
-			added.Add("clientid", panel.ClientID)
-			added.Add("loaderpanelid", panel.LoaderPanelID)
-			added.Add("persistentpanelid", panel.PersistentPanelID)
+			added.Add("content", panel.BasePanel.PanelContent)
+			added.Add("clientid", panel.BasePanel.AppClientID)
+			added.Add("loaderpanelid", panel.BasePanel.FixedPanelID)
+			added.Add("persistentpanelid", panel.UniquePanelID)
 			url.RawQuery = added.Encode()
-			panel.PanelContent = fmt.Sprintf("%v", url)
+			panel.BasePanel.PanelContent = fmt.Sprintf("%v", url)
 			return panel
 		case "Video", "Image", "Audio":
 			return panel
 		default:
-			log.Println("Unknown panel type: " + panel.PanelType)
+			log.Println("Unknown panel type: " + panel.BasePanel.PanelType)
 			return panel
 		}
 	})
 }
 
-func UnstripPanels(templatepanels []TemplateCustomPanel, panels []RuntimeCustomPanel) []RuntimeCustomPanel {
-	return pie.Map(panels, func(panel RuntimeCustomPanel) RuntimeCustomPanel {
-		switch panel.PanelType {
+func UnstripPanels(templatepanels []protocol.BasePanel, panels []protocol.RuntimePanel) []protocol.RuntimePanel {
+	return pie.Map(panels, func(panel protocol.RuntimePanel) protocol.RuntimePanel {
+		switch panel.BasePanel.PanelType {
 		case "System":
-			fromtemplate := templatepanels[pie.FindFirstUsing(templatepanels, func(tp TemplateCustomPanel) bool { return tp.LoaderPanelID == panel.LoaderPanelID })]
-			panel.PanelContent = fromtemplate.PanelContent;
+			fromtemplate := templatepanels[pie.FindFirstUsing(templatepanels, func(tp protocol.BasePanel) bool { return tp.FixedPanelID == panel.BasePanel.FixedPanelID })]
+			panel.BasePanel.PanelContent = fromtemplate.PanelContent;
 			return panel
 		case "Embedded":
-			fromtemplate := templatepanels[pie.FindFirstUsing(templatepanels, func(tp TemplateCustomPanel) bool { return tp.LoaderPanelID == panel.LoaderPanelID })]
-			panel.PanelContent = fromtemplate.PanelContent;
+			fromtemplate := templatepanels[pie.FindFirstUsing(templatepanels, func(tp protocol.BasePanel) bool { return tp.FixedPanelID == panel.BasePanel.FixedPanelID })]
+			panel.BasePanel.PanelContent = fromtemplate.PanelContent;
 			return panel
 		case "Video", "Image", "Audio":
 			return panel
 		default:
-			log.Println("Unknown panel type: " + panel.PanelType)
+			log.Println("Unknown panel type: " + panel.BasePanel.PanelType)
 			return panel
 		}
 	})
@@ -256,7 +254,7 @@ func panelSystem(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	marshalled, err := json.Marshal(result)
+	marshalled, err := proto.Marshal(&result)
 	clientid := GenerateGUID()
 
 	if err != nil {
@@ -264,7 +262,7 @@ func panelSystem(w http.ResponseWriter, r *http.Request) {
 		c.WriteMessage(websocket.TextMessage, []byte("ERAD: Error marshalling result"))
 		return
 	}
-	err = c.WriteMessage(websocket.TextMessage, marshalled)
+	err = c.WriteMessage(websocket.BinaryMessage, marshalled)
 	if err != nil {
 		log.Println("write:", err)
 		return
@@ -279,13 +277,14 @@ func panelSystem(w http.ResponseWriter, r *http.Request) {
 			if change.ClientID == clientid {
 				continue
 			}
-
-			marshalled, err := json.Marshal(change.NewData)
+			cr := protocol.RuntimePanelChangeRequest{}
+			cr.PanelChanges = pie.Map(change.NewData, func(panel protocol.RuntimePanel) *protocol.RuntimePanel { return &panel })
+			marshalled, err := proto.Marshal(&cr)
 			if err != nil {
 				log.Println("json:", err)
 				return
 			}
-			c.WriteMessage(websocket.TextMessage, marshalled)
+			c.WriteMessage(websocket.BinaryMessage, marshalled)
 		}
 	}()
 	for {
@@ -295,17 +294,26 @@ func panelSystem(w http.ResponseWriter, r *http.Request) {
 			panelchangehub.SendMessage(PanelDataChangeRequest{NewData: nil, ClientID: clientid, Stop: true})
 			return
 		}
-		decoded := string(message)
-		parsedLastActive := make([]RuntimeCustomPanel, 0)
+		parsedLastActive := protocol.RuntimePanelChangeRequest{}
+		proto.Unmarshal(message, &parsedLastActive)
 
-		err = json.Unmarshal([]byte(decoded), &parsedLastActive)
-		panelchangehub.SendMessage(PanelDataChangeRequest{NewData: parsedLastActive, ClientID: clientid, Stop: false})
+		panelchangehub.SendMessage(PanelDataChangeRequest{
+			NewData: pie.Map(parsedLastActive.PanelChanges, func(panel *protocol.RuntimePanel) protocol.RuntimePanel { return *panel }),
+			ClientID: clientid,
+			Stop: false,
+		})
 		if err != nil {
 			log.Println("json:", err)
 			return
 		}
-		parsedLastActive = UnstripPanels(result.AvailableTemplatePanels, parsedLastActive)
-		saved, err := json.Marshal(parsedLastActive)
+		persistent := protocol.PersistentRuntimePanels{}
+
+		persistent.Panels = pie.Map(UnstripPanels(
+			pie.Map(result.TemplatePanels,func(a *protocol.BasePanel) protocol.BasePanel {return *a}),
+			pie.Map(parsedLastActive.PanelChanges, func(panel *protocol.RuntimePanel) protocol.RuntimePanel { return *panel }),
+		), func(panel protocol.RuntimePanel) *protocol.RuntimePanel { return &panel })
+		parsedLastActive.PanelChanges = persistent.Panels;
+		saved, err := protojson.Marshal(&persistent)
 		if err != nil {
 			log.Println("json:", err)
 			return
@@ -340,31 +348,31 @@ func GetManifestsAndPaths() ([]AddonManifest, []string, error) {
 	return manifests, paths, nil
 }
 
-func LoadAllPanelsFromAddons() (ResultResponse, error) {
+func LoadAllPanelsFromAddons() (protocol.PanelSystemInitialResponse, error) {
 	if _, err := os.Stat("addons"); err != nil {
 		os.Mkdir("addons", 0755)
 	}
 	addons, err := os.ReadDir(ADDONS_PATH)
 	if err != nil {
 		log.Println(err)
-		return ResultResponse{}, fmt.Errorf("Error reading addons directory: %v", err)
+		return protocol.PanelSystemInitialResponse{}, fmt.Errorf("Error reading addons directory: %v", err)
 	}
-	availablePanels := make([]TemplateCustomPanel, 0)
-	convertedAvailablePanels := make([]RuntimeCustomPanel, 0)
+	availablePanels := make([]protocol.BasePanel, 0)
+	convertedAvailablePanels := make([]protocol.RuntimePanel, 0)
 	if _, err := os.Stat("storage/panels.json"); err != nil {
 		file, err := os.Create("storage/panels.json")
-		file.Write([]byte("[]"))
+		file.Write([]byte("{}"))
 		if err != nil {
 			log.Println(err)
-			return ResultResponse{}, fmt.Errorf("Error creating panels.json: %v", err)
+			return protocol.PanelSystemInitialResponse{}, fmt.Errorf("Error creating panels.json: %v", err)
 		}
 		file.Close()
 	}
 	lastActivePanels, err := LoadAllRuntimePanels("storage/panels.json")
-	preparedLastActivePanels := make([]RuntimeCustomPanel, 0)
+	preparedLastActivePanels := make([]protocol.RuntimePanel, 0)
 	if err != nil {
 		log.Println(err)
-		return ResultResponse{}, fmt.Errorf("Error loading last active panels: %v", err)
+		return protocol.PanelSystemInitialResponse{}, fmt.Errorf("Error loading last active panels: %v", err)
 	}
 	for i := 0; i < len(addons); i++ {
 		addon := addons[i]
@@ -382,35 +390,35 @@ func LoadAllPanelsFromAddons() (ResultResponse, error) {
 
 		if err != nil {
 			log.Println(err)
-			return ResultResponse{}, fmt.Errorf("Error loading manifest for addon %s: %v", addon.Name(), err)
+			return protocol.PanelSystemInitialResponse{}, fmt.Errorf("Error loading manifest for addon %s: %v", addon.Name(), err)
 		}
-		declaredPanels, err := LoadAllTemplatePanels(ADDONS_PATH + "/" + addon.Name() + "/panels.json")
+		declaredPanels, err := LoadAllBasePanels(ADDONS_PATH + "/" + addon.Name() + "/panels.json")
 
 		//Load all media as panels
 		if _ , err := os.Stat(ADDONS_PATH + "/" + addon.Name() + "/media/panels"); err == nil {
 			mediaPanels, err := LoadAllMediaAsPanels(ADDONS_PATH+"/"+addon.Name()+"/media/panels", manifest)
 			if err != nil {
 				log.Println(err)
-				return ResultResponse{}, fmt.Errorf("Error loading media panels for addon %s: %v", addon.Name(), err)
+				return protocol.PanelSystemInitialResponse{}, fmt.Errorf("Error loading media panels for addon %s: %v", addon.Name(), err)
 			}
 			declaredPanels = append(declaredPanels, mediaPanels...)
 		}
 
-		declaredPanels = pie.Map(declaredPanels, func(panel TemplateCustomPanel) TemplateCustomPanel {
-			panel.ClientID = manifest.ClientID
+		declaredPanels = pie.Map(declaredPanels, func(panel protocol.BasePanel) protocol.BasePanel {
+			panel.AppClientID = manifest.ClientID
 			return panel
 		})
 		if err != nil {
 			log.Println(err)
-			return ResultResponse{}, fmt.Errorf("Error loading panels for addon %s: %v", addon.Name(), err)
+			return protocol.PanelSystemInitialResponse{}, fmt.Errorf("Error loading panels for addon %s: %v", addon.Name(), err)
 		}
 		availablePanels = append(availablePanels, declaredPanels...)
 		converted := ConvertTemplatePanelsToRuntimePanels(availablePanels)
 
 		lastActivePanels = MeshTemplateAndRuntimePanels(declaredPanels, lastActivePanels)
 		ra, err := manifest.GetRAOrBootstrapAddon(addon.Name())
-		panelsForThisAddon := pie.Filter(lastActivePanels, func(ra RuntimeCustomPanel) bool { return ra.ClientID == manifest.ClientID })
-		templateRuntimePanelsForThisAddon2 := pie.Filter(converted, func(ra RuntimeCustomPanel) bool { return ra.ClientID == manifest.ClientID })
+		panelsForThisAddon := pie.Filter(lastActivePanels, func(ra protocol.RuntimePanel) bool { return ra.BasePanel.AppClientID == manifest.ClientID })
+		templateRuntimePanelsForThisAddon2 := pie.Filter(converted, func(ra protocol.RuntimePanel) bool { return ra.BasePanel.AppClientID  == manifest.ClientID })
 		if err != nil {
 			if err.Error() == "No bootstrap executable found for addon "+manifest.Name {
 				log.Println("No bootstrap executable found for addon " + manifest.Name)
@@ -421,10 +429,10 @@ func LoadAllPanelsFromAddons() (ResultResponse, error) {
 		} else {
 
 			for index, _ := range panelsForThisAddon {
-				panelsForThisAddon[index].ControlPort = ra.ControlPort
+				panelsForThisAddon[index].ControlPort = int32(ra.ControlPort)
 			}
 			for index, _ := range templateRuntimePanelsForThisAddon2 {
-				templateRuntimePanelsForThisAddon2[index].ControlPort = ra.ControlPort
+				templateRuntimePanelsForThisAddon2[index].ControlPort = int32(ra.ControlPort)
 			}
 
 		}
@@ -435,18 +443,19 @@ func LoadAllPanelsFromAddons() (ResultResponse, error) {
 	deleted := DeletedPanels(preparedLastActivePanels, availablePanels)
 	for _, panel := range deleted {
 		for index, ra := range preparedLastActivePanels {
-			if panel.LoaderPanelID == ra.LoaderPanelID {
+			if panel.BasePanel.FixedPanelID == ra.BasePanel.FixedPanelID {
 				preparedLastActivePanels[index].Deleted = true
 			}
 		}
 	}
 
 	finallastActivePanels := PreparePanels(preparedLastActivePanels)
-	result := ResultResponse{
-		AvailablePanels:         PreparePanels(convertedAvailablePanels),
-		AvailableTemplatePanels: availablePanels,
-		LastActivePanels:        finallastActivePanels,
-		DeletedPanels:           deleted,
+	result := protocol.PanelSystemInitialResponse{
+
+		InstancedButBlankPanels:         pie.Map(PreparePanels(convertedAvailablePanels), func(panel protocol.RuntimePanel) *protocol.RuntimePanel { return &panel }),
+		TemplatePanels: pie.Map(availablePanels, func(panel protocol.BasePanel) *protocol.BasePanel { return &panel }),
+		InstancedPanelsFromStorage:        pie.Map(finallastActivePanels, func(panel protocol.RuntimePanel) *protocol.RuntimePanel { return &panel }),
+		DeletedInstancedPanels:           pie.Map(deleted, func(panel protocol.RuntimePanel) *protocol.RuntimePanel { return &panel }),
 	}
 	return result, nil
 }
